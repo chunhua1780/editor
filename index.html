@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>SCRATCH STUDIO v10.0 - 完美中轴对齐版</title>
+    <title>SCRATCH STUDIO v11.0 - 多图层管理与隐藏功能</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@500;700&display=swap');
 
@@ -10,16 +10,16 @@
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; display: flex; height: 100vh; overflow: hidden; }
 
         /* --- 左侧控制面板 --- */
-        #aside { width: 320px; background: var(--panel); border-right: 1px solid #323248; display: flex; flex-direction: column; z-index: 100; }
-        .header { padding: 15px; background: #252535; font-weight: bold; color: var(--accent); border-bottom: 1px solid #323248; font-size: 14px; }
+        #aside { width: 340px; background: var(--panel); border-right: 1px solid #323248; display: flex; flex-direction: column; z-index: 100; }
+        .header { padding: 15px; background: #252535; border-bottom: 1px solid #323248; font-weight: bold; color: var(--accent); font-size: 14px; }
         .scroll { flex: 1; overflow-y: auto; padding: 15px; }
         
         .group { background: #2b2b3d; border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid #3f3f5a; }
         .group h4 { margin: 0 0 10px 0; font-size: 11px; color: #888; text-transform: uppercase; border-bottom: 1px solid #3f3f5a; padding-bottom: 5px; }
         
         .row { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; }
-        .row label { width: 90px; color: #aaa; }
-        .row input { flex: 1; background: #151520; color: #fff; border: 1px solid #444; padding: 3px; border-radius: 4px; }
+        .row label { width: 100px; color: #aaa; }
+        .row input, .row select { flex: 1; background: #151520; color: #fff; border: 1px solid #444; padding: 3px; border-radius: 4px; }
         .row input[type="range"] { accent-color: var(--accent); cursor: pointer; }
 
         /* --- 画布预览区 --- */
@@ -31,159 +31,112 @@
         }
 
         /* 可编辑元素通用样式 */
-        .u-el { position: absolute; cursor: move; border: 1px solid transparent; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .u-el { position: absolute; cursor: move; border: 1px solid transparent; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.2s; }
         .u-el:hover { border: 1px dashed var(--accent); }
         .u-el.active { border: 2px solid var(--accent) !important; background: rgba(114, 103, 239, 0.1); }
+        .u-el.hidden-layer { opacity: 0.15 !important; border: 1px dotted #ff4444 !important; pointer-events: none !important; }
 
         /* 斜拉手柄 */
         .resizer { position: absolute; width: 12px; height: 12px; background: #fff; border: 2px solid var(--accent); right: -6px; bottom: -6px; cursor: nwse-resize; z-index: 100; border-radius: 50%; }
 
-        /* 核心优化：矩阵内部排版 */
+        /* 矩阵排版 */
         .grid-box { display: grid; width: 100%; height: 100%; pointer-events: none; }
-        /* 关键：cell 内部强制居中对齐 */
         .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; height: 100%; }
         .val { font-family: 'Montserrat', sans-serif; font-weight: 900; line-height: 1; }
         .amt { font-family: 'Oswald', sans-serif; font-weight: 700; line-height: 1.2; margin-top: 2px; }
 
-        /* 中奖单数样式 */
-        .win-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-
-        canvas { width: 100%; height: 100%; display: block; }
+        canvas { width: 100%; height: 100%; display: block; border-radius: 2px; }
         .btn { background: var(--accent); color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: 0.2s; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:hover { background: #5a52c7; }
+        .btn-toggle { background: #444; font-size: 11px; padding: 5px; }
+        .btn-toggle.on { background: #28a745; }
     </style>
 </head>
 <body>
 
 <aside id="aside">
-    <div class="header">EDITOR PRO V10.0 - ALIGNMENT</div>
+    <div class="header">EDITOR PRO V11.0 - MULTI-LAYER</div>
     <div class="scroll">
+        
         <div class="group">
-            <h4>🎯 当前选中：<span id="active-name" style="color:var(--accent)">未选择</span></h4>
+            <h4>🎯 选中元素：<span id="active-name" style="color:var(--accent)">未选择</span></h4>
+            <div class="row">
+                <label>图层可见性</label>
+                <button id="visible-btn" class="btn btn-toggle on" onclick="toggleVisibility()">显示中 (Visible)</button>
+            </div>
             <div class="row"><label>文字颜色</label><input type="color" id="p-color" oninput="applyProp()"></div>
-            <div class="row"><label>数字大小</label><input type="range" id="p-fs" min="10" max="120" oninput="applyProp()"></div>
-            <div class="row"><label>金额大小</label><input type="range" id="p-amt-fs" min="8" max="40" value="12" oninput="applyProp()"></div>
+            <div class="row"><label>数字大小</label><input type="range" id="p-fs" min="10" max="100" oninput="applyProp()"></div>
+            <div class="row"><label>金额大小</label><input type="range" id="p-amt-fs" min="8" max="40" oninput="applyProp()"></div>
         </div>
 
         <div class="group">
-            <h4>🔢 矩阵对齐控制</h4>
+            <h4>🔢 刮奖矩阵设定</h4>
             <div class="row"><label>列 × 行</label>
                 <input type="number" id="g-cols" value="5" style="width:40px" onchange="buildGrid()"> × 
                 <input type="number" id="g-rows" value="5" style="width:40px" onchange="buildGrid()">
             </div>
-            <div class="row"><label>左右间距</label><input type="range" id="g-gapx" min="0" max="50" oninput="applyProp()"></div>
-            <div class="row"><label>上下间距</label><input type="range" id="g-gapy" min="0" max="50" oninput="applyProp()"></div>
+            <div class="row"><label>横向间距</label><input type="range" id="g-gapx" min="0" max="50" oninput="applyProp()"></div>
+            <div class="row"><label>纵向间距</label><input type="range" id="g-gapy" min="0" max="50" oninput="applyProp()"></div>
         </div>
 
         <div class="group">
-            <h4>🏗️ 图层管理</h4>
-            <button class="btn" onclick="addCanvasLayer()">添加刮奖画布 (独立位置)</button>
-            <div class="row" style="margin-top:10px;"><label>画布风格</label>
-                <select id="p-tex" onchange="applyProp()" style="flex:1; background:#151520; color:#fff; border:1px solid #444; padding:3px;">
-                    <option value="silver">经典拉丝银</option>
-                    <option value="gold">奢华磨砂金</option>
-                    <option value="dots">欧美点阵纹</option>
+            <h4>🏗️ 图层仓库</h4>
+            <button class="btn" onclick="addLayerManually()">➕ 添加新刮奖画布</button>
+            <div class="row" style="margin-top:10px;"><label>纹理风格</label>
+                <select id="p-tex" onchange="applyProp()">
+                    <option value="silver">美式拉丝银</option>
+                    <option value="gold">拉丝金</option>
+                    <option value="dots">欧美点阵防伪</option>
                 </select>
             </div>
         </div>
 
-        <button class="btn" style="background:#28a745; margin-top:20px;">生成并复制 HTML 代码</button>
+        <button class="btn" style="background:#28a745; margin-top:20px;">保存并生成代码</button>
     </div>
 </aside>
 
 <main id="viewport">
     <div id="artboard">
-        <div id="el-win" class="u-el" style="left:140px; top:130px; width:80px; height:100px; color:#000000;">
-            <div class="win-wrapper">
+        <div id="Target_Win" class="u-el" style="left:140px; top:130px; width:80px; height:100px; color:#000000;">
+            <div class="cell">
                 <div class="val" style="font-size:40px;">88</div>
                 <div class="amt" style="font-size:14px; color:#d32f2f;">WINNER</div>
             </div>
             <div class="resizer"></div>
         </div>
 
-        <div id="el-grid" class="u-el active" style="left:20px; top:260px; width:320px; height:400px; color:#ffffff;">
+        <div id="Target_Grid" class="u-el active" style="left:20px; top:260px; width:320px; height:400px; color:#ffffff;">
             <div id="grid-inner" class="grid-box"></div>
             <div class="resizer"></div>
         </div>
-    </div>
+
+        </div>
 </main>
 
 <script>
-    let activeEl = document.getElementById('el-grid');
+    let activeEl = document.getElementById('Target_Grid');
     let layerCount = 0;
 
     function init() {
         buildGrid();
-        bindEvents(document.getElementById('el-win'));
-        bindEvents(document.getElementById('el-grid'));
+        bindEvents(document.getElementById('Target_Win'));
+        bindEvents(document.getElementById('Target_Grid'));
+        
+        // 刚开始就增加两个画布图层，位置不同
+        addLayerAt(140, 130, 80, 100, "Layer_WinCover"); // 覆盖中奖号
+        addLayerAt(20, 260, 320, 400, "Layer_GridCover"); // 覆盖大矩阵
+        
         updateUI();
     }
 
-    // --- 核心：矩阵生成与对齐 ---
-    function buildGrid() {
-        const c = document.getElementById('g-cols').value;
-        const r = document.getElementById('g-rows').value;
-        const box = document.getElementById('grid-inner');
-        box.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
-        
-        let html = '';
-        for(let i=0; i<c*r; i++) {
-            const n = Math.floor(Math.random()*90)+10;
-            const a = [5, 10, 20, 50, 100][Math.floor(Math.random()*5)];
-            // 每一个 cell 内部自带对齐逻辑
-            html += `
-                <div class="cell">
-                    <span class="val">${n}</span>
-                    <span class="amt">$${a}</span>
-                </div>`;
-        }
-        box.innerHTML = html;
-        applyProp();
-    }
-
-    // --- 属性应用 (包含居中对齐逻辑) ---
-    function applyProp() {
-        if(!activeEl) return;
-
-        const color = document.getElementById('p-color').value;
-        const fs = document.getElementById('p-fs').value;
-        const amtFs = document.getElementById('p-amt-fs').value;
-
-        // 统一应用颜色和数字大小
-        activeEl.style.color = color;
-        
-        if(activeEl.id === 'el-grid') {
-            const gx = document.getElementById('g-gapx').value;
-            const gy = document.getElementById('g-gapy').value;
-            const box = activeEl.querySelector('.grid-box');
-            box.style.columnGap = gx + 'px';
-            box.style.rowGap = gy + 'px';
-
-            activeEl.querySelectorAll('.val').forEach(v => {
-                v.style.fontSize = fs + 'px';
-                v.style.color = color;
-            });
-            activeEl.querySelectorAll('.amt').forEach(a => {
-                a.style.fontSize = amtFs + 'px';
-            });
-        } else if(activeEl.id === 'el-win') {
-            activeEl.querySelector('.val').style.fontSize = fs + 'px';
-            activeEl.querySelector('.amt').style.fontSize = amtFs + 'px';
-            activeEl.querySelector('.val').style.color = color;
-        }
-
-        if(activeEl.classList.contains('cvs-layer')) {
-            drawCanvas(activeEl.querySelector('canvas'));
-        }
-    }
-
-    // --- 画布逻辑 ---
-    function addCanvasLayer() {
+    // --- 功能：指定位置添加画布 ---
+    function addLayerAt(x, y, w, h, idName) {
         layerCount++;
+        const id = idName || "Layer_" + layerCount;
         const newLayer = document.createElement('div');
         newLayer.className = 'u-el cvs-layer';
-        newLayer.id = 'Layer_' + layerCount;
-        newLayer.style.cssText = `left:40px; top:${120 + (layerCount*40)}px; width:160px; height:90px; z-index:${100+layerCount};`;
+        newLayer.id = id;
+        newLayer.style.cssText = `left:${x}px; top:${y}px; width:${w}px; height:${h}px; z-index:${100+layerCount};`;
         
         const cvs = document.createElement('canvas');
         newLayer.appendChild(cvs);
@@ -193,8 +146,69 @@
 
         document.getElementById('artboard').appendChild(newLayer);
         bindEvents(newLayer);
-        selectEl(newLayer);
         drawCanvas(cvs);
+    }
+
+    function addLayerManually() {
+        // 手动添加时放在中央，防止重叠
+        addLayerAt(100, 350, 150, 100);
+        selectEl(document.querySelector('.cvs-layer:last-child'));
+    }
+
+    // --- 功能：隐藏/显示切换 ---
+    function toggleVisibility() {
+        if(!activeEl || activeEl.id.startsWith('Target')) return;
+        
+        const btn = document.getElementById('visible-btn');
+        if(activeEl.classList.contains('hidden-layer')) {
+            activeEl.classList.remove('hidden-layer');
+            btn.innerText = "显示中 (Visible)";
+            btn.classList.add('on');
+        } else {
+            activeEl.classList.add('hidden-layer');
+            btn.innerText = "已隐藏 (Hidden)";
+            btn.classList.remove('on');
+        }
+    }
+
+    // --- 核心：矩阵生成 ---
+    function buildGrid() {
+        const c = document.getElementById('g-cols').value;
+        const r = document.getElementById('g-rows').value;
+        const box = document.getElementById('grid-inner');
+        box.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
+        
+        let html = '';
+        for(let i=0; i<c*r; i++) {
+            const n = Math.floor(Math.random()*90)+10;
+            const a = [2, 5, 10, 20, 50, 100][Math.floor(Math.random()*6)];
+            html += `<div class="cell"><span class="val">${n}</span><span class="amt">$${a}</span></div>`;
+        }
+        box.innerHTML = html;
+        applyProp();
+    }
+
+    // --- 属性应用 ---
+    function applyProp() {
+        if(!activeEl) return;
+        const color = document.getElementById('p-color').value;
+        const fs = document.getElementById('p-fs').value;
+        const amtFs = document.getElementById('p-amt-fs').value;
+
+        if(activeEl.id === 'Target_Grid') {
+            const gx = document.getElementById('g-gapx').value;
+            const gy = document.getElementById('g-gapy').value;
+            activeEl.querySelector('.grid-box').style.columnGap = gx + 'px';
+            activeEl.querySelector('.grid-box').style.rowGap = gy + 'px';
+            activeEl.querySelectorAll('.val').forEach(v => { v.style.fontSize = fs + 'px'; v.style.color = color; });
+            activeEl.querySelectorAll('.amt').forEach(a => { a.style.fontSize = amtFs + 'px'; });
+        } else if(activeEl.id === 'Target_Win') {
+            activeEl.querySelector('.val').style.fontSize = fs + 'px';
+            activeEl.querySelector('.val').style.color = color;
+            activeEl.querySelector('.amt').style.fontSize = amtFs + 'px';
+        } else if(activeEl.classList.contains('cvs-layer')) {
+            drawCanvas(activeEl.querySelector('canvas'));
+        }
     }
 
     function drawCanvas(cvs) {
@@ -221,7 +235,7 @@
         }
     }
 
-    // --- 交互系统 ---
+    // --- 交互与事件 ---
     function bindEvents(el) {
         el.onmousedown = (e) => {
             if(e.target.classList.contains('resizer')) return;
@@ -247,7 +261,7 @@
             document.onmousemove = (me) => {
                 el.style.width = (sw + (me.clientX - sx)) + 'px';
                 el.style.height = (sh + (me.clientY - sy)) + 'px';
-                if(el.classList.contains('cvs-layer')) drawCanvas(el.querySelector('canvas'));
+                if(el.querySelector('canvas')) drawCanvas(el.querySelector('canvas'));
             };
             document.onmouseup = () => document.onmousemove = null;
         };
@@ -263,11 +277,15 @@
     function updateUI() {
         if(!activeEl) return;
         document.getElementById('active-name').innerText = activeEl.id;
-        // 同步颜色和字号到滑块
-        const rgb = window.getComputedStyle(activeEl).color;
-        document.getElementById('p-color').value = rgbToHex(rgb);
-        const valSpan = activeEl.querySelector('.val');
-        if(valSpan) document.getElementById('p-fs').value = parseInt(window.getComputedStyle(valSpan).fontSize);
+        
+        const btn = document.getElementById('visible-btn');
+        if(activeEl.id.startsWith('Target')) {
+            btn.disabled = true; btn.style.opacity = 0.5;
+        } else {
+            btn.disabled = false; btn.style.opacity = 1;
+            btn.innerText = activeEl.classList.contains('hidden-layer') ? "已隐藏 (Hidden)" : "显示中 (Visible)";
+            btn.className = activeEl.classList.contains('hidden-layer') ? "btn btn-toggle" : "btn btn-toggle on";
+        }
     }
 
     function rgbToHex(rgb) {
