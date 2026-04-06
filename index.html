@@ -1,63 +1,46 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>SCRATCH STUDIO v11.0 - 多图层管理与隐藏功能</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@500;700&display=swap');
-
-        :root { --panel: #1e1e2d; --accent: #7267ef; --bg: #0f0f12; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; display: flex; height: 100vh; overflow: hidden; }
-
-        /* --- 左侧控制面板 --- */
-        #aside { width: 340px; background: var(--panel); border-right: 1px solid #323248; display: flex; flex-direction: column; z-index: 100; }
-        .header { padding: 15px; background: #252535; border-bottom: 1px solid #323248; font-weight: bold; color: var(--accent); font-size: 14px; }
-        .scroll { flex: 1; overflow-y: auto; padding: 15px; }
-        
-        .group { background: #2b2b3d; border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid #3f3f5a; }
-        .group h4 { margin: 0 0 10px 0; font-size: 11px; color: #888; text-transform: uppercase; border-bottom: 1px solid #3f3f5a; padding-bottom: 5px; }
-        
-        .row { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; }
-        .row label { width: 100px; color: #aaa; }
-        .row input, .row select { flex: 1; background: #151520; color: #fff; border: 1px solid #444; padding: 3px; border-radius: 4px; }
-        .row input[type="range"] { accent-color: var(--accent); cursor: pointer; }
-
-        /* --- 画布预览区 --- */
-        #viewport { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: auto; background: #111; }
-        #artboard { 
-            position: relative; width: 360px; height: 720px; 
-            background: url('64005.jpg') center/100% 100% no-repeat;
-            background-color: #333; box-shadow: 0 0 50px rgba(0,0,0,0.8);
-        }
-
-        /* 可编辑元素通用样式 */
-        .u-el { position: absolute; cursor: move; border: 1px solid transparent; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.2s; }
-        .u-el:hover { border: 1px dashed var(--accent); }
-        .u-el.active { border: 2px solid var(--accent) !important; background: rgba(114, 103, 239, 0.1); }
-        .u-el.hidden-layer { opacity: 0.15 !important; border: 1px dotted #ff4444 !important; pointer-events: none !important; }
-
-        /* 斜拉手柄 */
-        .resizer { position: absolute; width: 12px; height: 12px; background: #fff; border: 2px solid var(--accent); right: -6px; bottom: -6px; cursor: nwse-resize; z-index: 100; border-radius: 50%; }
-
-        /* 矩阵排版 */
-        .grid-box { display: grid; width: 100%; height: 100%; pointer-events: none; }
-        .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; height: 100%; }
-        .val { font-family: 'Montserrat', sans-serif; font-weight: 900; line-height: 1; }
-        .amt { font-family: 'Oswald', sans-serif; font-weight: 700; line-height: 1.2; margin-top: 2px; }
-
-        canvas { width: 100%; height: 100%; display: block; border-radius: 2px; }
-        .btn { background: var(--accent); color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: 0.2s; }
-        .btn:hover { background: #5a52c7; }
-        .btn-toggle { background: #444; font-size: 11px; padding: 5px; }
-        .btn-toggle.on { background: #28a745; }
-    </style>
+<meta charset="UTF-8">
+<title>SCRATCH STUDIO v12.0 - 完整多层+纹理+导出HTML</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@500;700&display=swap');
+:root { --panel:#1e1e2d; --accent:#7267ef; --bg:#0f0f12; }
+body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:#fff;display:flex;height:100vh;overflow:hidden;}
+#aside{width:340px;background:var(--panel);border-right:1px solid #323248;display:flex;flex-direction:column;z-index:100;}
+.header{padding:15px;background:#252535;border-bottom:1px solid #323248;font-weight:bold;color:var(--accent);font-size:14px;}
+.scroll{flex:1;overflow-y:auto;padding:15px;}
+.group{background:#2b2b3d;border-radius:8px;padding:12px;margin-bottom:15px;border:1px solid #3f3f5a;}
+.group h4{margin:0 0 10px 0;font-size:11px;color:#888;text-transform:uppercase;border-bottom:1px solid #3f3f5a;padding-bottom:5px;}
+.row{display:flex;align-items:center;margin-bottom:8px;font-size:12px;}
+.row label{width:100px;color:#aaa;}
+.row input,.row select{flex:1;background:#151520;color:#fff;border:1px solid #444;padding:3px;border-radius:4px;}
+.row input[type="range"]{accent-color:var(--accent);cursor:pointer;}
+#viewport{flex:1;position:relative;display:flex;justify-content:center;align-items:center;overflow:auto;background:#111;}
+#artboard{position:relative;width:360px;height:720px;background:#333;box-shadow:0 0 50px rgba(0,0,0,0.8);}
+.u-el{position:absolute;cursor:move;border:1px solid transparent;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.2s;}
+.u-el:hover{border:1px dashed var(--accent);}
+.u-el.active{border:2px solid var(--accent)!important;background:rgba(114,103,239,0.1);}
+.u-el.hidden-layer{opacity:0.15!important;border:1px dotted #ff4444!important;pointer-events:none!important;}
+.resizer{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--accent);right:-6px;bottom:-6px;cursor:nwse-resize;z-index:100;border-radius:50%;}
+.grid-box{display:grid;width:100%;height:100%;pointer-events:none;}
+.cell{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%;height:100%;}
+.val{font-family:'Montserrat',sans-serif;font-weight:900;line-height:1;}
+.amt{font-family:'Oswald',sans-serif;font-weight:700;line-height:1.2;margin-top:2px;}
+canvas{width:100%;height:100%;display:block;border-radius:2px;}
+.btn{background:var(--accent);color:white;border:none;padding:10px;width:100%;border-radius:4px;cursor:pointer;font-weight:bold;margin-top:5px;transition:0.2s;}
+.btn:hover{background:#5a52c7;}
+.btn-toggle{background:#444;font-size:11px;padding:5px;}
+.btn-toggle.on{background:#28a745;}
+textarea#export-code{width:100%;height:400px;background:#151520;color:#fff;border:1px solid #444;border-radius:4px;padding:10px;resize:none;font-family:monospace;font-size:12px;}
+</style>
 </head>
 <body>
 
 <aside id="aside">
-    <div class="header">EDITOR PRO V11.0 - MULTI-LAYER</div>
+    <div class="header">EDITOR PRO V12.0 - 多图层+纹理增强</div>
     <div class="scroll">
-        
+
         <div class="group">
             <h4>🎯 选中元素：<span id="active-name" style="color:var(--accent)">未选择</span></h4>
             <div class="row">
@@ -80,18 +63,23 @@
         </div>
 
         <div class="group">
-            <h4>🏗️ 图层仓库</h4>
+            <h4>🏗️ 图层仓库与纹理</h4>
             <button class="btn" onclick="addLayerManually()">➕ 添加新刮奖画布</button>
             <div class="row" style="margin-top:10px;"><label>纹理风格</label>
                 <select id="p-tex" onchange="applyProp()">
                     <option value="silver">美式拉丝银</option>
                     <option value="gold">拉丝金</option>
                     <option value="dots">欧美点阵防伪</option>
+                    <option value="money-usd">美元符号暗纹</option>
+                    <option value="money-eur">欧元符号暗纹</option>
+                    <option value="metal-grid">金属网格暗纹</option>
                 </select>
             </div>
+            <div class="row"><label>暗纹颜色</label><input type="color" id="tex-color" value="#000000" oninput="applyProp()"></div>
+            <div class="row"><label>符号大小</label><input type="range" id="tex-size" min="8" max="40" value="24" oninput="applyProp()"></div>
         </div>
 
-        <button class="btn" style="background:#28a745; margin-top:20px;">保存并生成代码</button>
+        <button class="btn" style="background:#28a745; margin-top:20px;" onclick="exportHTML()">保存并生成HTML</button>
     </div>
 </aside>
 
@@ -109,192 +97,205 @@
             <div id="grid-inner" class="grid-box"></div>
             <div class="resizer"></div>
         </div>
-
-        </div>
+    </div>
 </main>
 
 <script>
-    let activeEl = document.getElementById('Target_Grid');
-    let layerCount = 0;
+let activeEl = document.getElementById('Target_Grid');
+let layerCount = 0;
 
-    function init() {
-        buildGrid();
-        bindEvents(document.getElementById('Target_Win'));
-        bindEvents(document.getElementById('Target_Grid'));
-        
-        // 刚开始就增加两个画布图层，位置不同
-        addLayerAt(140, 130, 80, 100, "Layer_WinCover"); // 覆盖中奖号
-        addLayerAt(20, 260, 320, 400, "Layer_GridCover"); // 覆盖大矩阵
-        
-        updateUI();
+function init(){
+    buildGrid();
+    bindEvents(document.getElementById('Target_Win'));
+    bindEvents(document.getElementById('Target_Grid'));
+    addLayerAt(140,130,80,100,"Layer_WinCover");
+    addLayerAt(20,260,320,400,"Layer_GridCover");
+    updateUI();
+}
+
+function addLayerAt(x,y,w,h,idName){
+    layerCount++;
+    const id = idName||"Layer_"+layerCount;
+    const newLayer = document.createElement('div');
+    newLayer.className='u-el cvs-layer';
+    newLayer.id=id;
+    newLayer.style.cssText=`left:${x}px;top:${y}px;width:${w}px;height:${h}px;z-index:${100+layerCount};`;
+    const cvs=document.createElement('canvas');
+    newLayer.appendChild(cvs);
+    const rs=document.createElement('div');
+    rs.className='resizer';
+    newLayer.appendChild(rs);
+    document.getElementById('artboard').appendChild(newLayer);
+    bindEvents(newLayer);
+    drawCanvas(cvs);
+}
+
+function addLayerManually(){
+    addLayerAt(100,350,150,100);
+    selectEl(document.querySelector('.cvs-layer:last-child'));
+}
+
+function toggleVisibility(){
+    if(!activeEl||activeEl.id.startsWith('Target'))return;
+    const btn=document.getElementById('visible-btn');
+    if(activeEl.classList.contains('hidden-layer')){
+        activeEl.classList.remove('hidden-layer');
+        btn.innerText="显示中 (Visible)";
+        btn.classList.add('on');
+    }else{
+        activeEl.classList.add('hidden-layer');
+        btn.innerText="已隐藏 (Hidden)";
+        btn.classList.remove('on');
     }
+}
 
-    // --- 功能：指定位置添加画布 ---
-    function addLayerAt(x, y, w, h, idName) {
-        layerCount++;
-        const id = idName || "Layer_" + layerCount;
-        const newLayer = document.createElement('div');
-        newLayer.className = 'u-el cvs-layer';
-        newLayer.id = id;
-        newLayer.style.cssText = `left:${x}px; top:${y}px; width:${w}px; height:${h}px; z-index:${100+layerCount};`;
-        
-        const cvs = document.createElement('canvas');
-        newLayer.appendChild(cvs);
-        const rs = document.createElement('div');
-        rs.className = 'resizer';
-        newLayer.appendChild(rs);
-
-        document.getElementById('artboard').appendChild(newLayer);
-        bindEvents(newLayer);
-        drawCanvas(cvs);
+function buildGrid(){
+    const c=document.getElementById('g-cols').value;
+    const r=document.getElementById('g-rows').value;
+    const box=document.getElementById('grid-inner');
+    box.style.gridTemplateColumns=`repeat(${c},1fr)`;
+    let html='';
+    for(let i=0;i<c*r;i++){
+        const n=Math.floor(Math.random()*90)+10;
+        const a=[2,5,10,20,50,100][Math.floor(Math.random()*6)];
+        html+=`<div class="cell"><span class="val">${n}</span><span class="amt">$${a}</span></div>`;
     }
+    box.innerHTML=html;
+    applyProp();
+}
 
-    function addLayerManually() {
-        // 手动添加时放在中央，防止重叠
-        addLayerAt(100, 350, 150, 100);
-        selectEl(document.querySelector('.cvs-layer:last-child'));
+function applyProp(){
+    if(!activeEl) return;
+    const color=document.getElementById('p-color').value;
+    const fs=document.getElementById('p-fs').value;
+    const amtFs=document.getElementById('p-amt-fs').value;
+    const tex=document.getElementById('p-tex').value;
+    const texColor=document.getElementById('tex-color').value;
+    const texSize=document.getElementById('tex-size').value;
+
+    if(activeEl.id==='Target_Grid'){
+        const gx=document.getElementById('g-gapx').value;
+        const gy=document.getElementById('g-gapy').value;
+        activeEl.querySelector('.grid-box').style.columnGap=gx+'px';
+        activeEl.querySelector('.grid-box').style.rowGap=gy+'px';
+        activeEl.querySelectorAll('.val').forEach(v=>{v.style.fontSize=fs+'px';v.style.color=color;});
+        activeEl.querySelectorAll('.amt').forEach(a=>{a.style.fontSize=amtFs+'px';});
+    }else if(activeEl.id==='Target_Win'){
+        activeEl.querySelector('.val').style.fontSize=fs+'px';
+        activeEl.querySelector('.val').style.color=color;
+        activeEl.querySelector('.amt').style.fontSize=amtFs+'px';
+    }else if(activeEl.classList.contains('cvs-layer')){
+        drawCanvas(activeEl.querySelector('canvas'));
     }
+}
 
-    // --- 功能：隐藏/显示切换 ---
-    function toggleVisibility() {
-        if(!activeEl || activeEl.id.startsWith('Target')) return;
-        
-        const btn = document.getElementById('visible-btn');
-        if(activeEl.classList.contains('hidden-layer')) {
-            activeEl.classList.remove('hidden-layer');
-            btn.innerText = "显示中 (Visible)";
-            btn.classList.add('on');
-        } else {
-            activeEl.classList.add('hidden-layer');
-            btn.innerText = "已隐藏 (Hidden)";
-            btn.classList.remove('on');
-        }
-    }
+function drawCanvas(cvs){
+    const parent=cvs.parentElement;
+    cvs.width=parent.offsetWidth;
+    cvs.height=parent.offsetHeight;
+    const ctx=cvs.getContext('2d');
+    const tex=document.getElementById('p-tex').value;
+    const texColor=document.getElementById('tex-color').value;
+    const texSize=document.getElementById('tex-size').value;
 
-    // --- 核心：矩阵生成 ---
-    function buildGrid() {
-        const c = document.getElementById('g-cols').value;
-        const r = document.getElementById('g-rows').value;
-        const box = document.getElementById('grid-inner');
-        box.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
-        
-        let html = '';
-        for(let i=0; i<c*r; i++) {
-            const n = Math.floor(Math.random()*90)+10;
-            const a = [2, 5, 10, 20, 50, 100][Math.floor(Math.random()*6)];
-            html += `<div class="cell"><span class="val">${n}</span><span class="amt">$${a}</span></div>`;
-        }
-        box.innerHTML = html;
-        applyProp();
-    }
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle=(tex.includes('gold'))?'#d4af37':'#c0c0c0';
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.globalAlpha=0.2;
+    ctx.fillStyle=texColor;
+    ctx.font=`${texSize}px Montserrat`;
 
-    // --- 属性应用 ---
-    function applyProp() {
-        if(!activeEl) return;
-        const color = document.getElementById('p-color').value;
-        const fs = document.getElementById('p-fs').value;
-        const amtFs = document.getElementById('p-amt-fs').value;
-
-        if(activeEl.id === 'Target_Grid') {
-            const gx = document.getElementById('g-gapx').value;
-            const gy = document.getElementById('g-gapy').value;
-            activeEl.querySelector('.grid-box').style.columnGap = gx + 'px';
-            activeEl.querySelector('.grid-box').style.rowGap = gy + 'px';
-            activeEl.querySelectorAll('.val').forEach(v => { v.style.fontSize = fs + 'px'; v.style.color = color; });
-            activeEl.querySelectorAll('.amt').forEach(a => { a.style.fontSize = amtFs + 'px'; });
-        } else if(activeEl.id === 'Target_Win') {
-            activeEl.querySelector('.val').style.fontSize = fs + 'px';
-            activeEl.querySelector('.val').style.color = color;
-            activeEl.querySelector('.amt').style.fontSize = amtFs + 'px';
-        } else if(activeEl.classList.contains('cvs-layer')) {
-            drawCanvas(activeEl.querySelector('canvas'));
-        }
-    }
-
-    function drawCanvas(cvs) {
-        const parent = cvs.parentElement;
-        cvs.width = parent.offsetWidth;
-        cvs.height = parent.offsetHeight;
-        const ctx = cvs.getContext('2d');
-        const tex = document.getElementById('p-tex').value;
-        
-        ctx.fillStyle = (tex === 'gold') ? '#d4af37' : '#c0c0c0';
-        ctx.fillRect(0,0,cvs.width, cvs.height);
-        
-        ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-        if(tex === 'dots') {
-            for(let i=0; i<cvs.width; i+=12) {
-                for(let j=0; j<cvs.height; j+=12) {
-                    ctx.beginPath(); ctx.arc(i,j,1.5,0,Math.PI*2); ctx.stroke();
-                }
-            }
-        } else {
-            for(let i=0; i<cvs.height; i+=4) {
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(cvs.width, i+1); ctx.stroke();
+    if(tex==='dots'){
+        ctx.strokeStyle='rgba(0,0,0,0.15)';
+        for(let i=0;i<cvs.width;i+=12){
+            for(let j=0;j<cvs.height;j+=12){
+                ctx.beginPath();ctx.arc(i,j,1.5,0,Math.PI*2);ctx.stroke();
             }
         }
-    }
-
-    // --- 交互与事件 ---
-    function bindEvents(el) {
-        el.onmousedown = (e) => {
-            if(e.target.classList.contains('resizer')) return;
-            selectEl(el);
-            let ox = e.clientX - el.offsetLeft;
-            let oy = e.clientY - el.offsetTop;
-            document.onmousemove = (me) => {
-                el.style.left = (me.clientX - ox) + 'px';
-                el.style.top = (me.clientY - oy) + 'px';
-            };
-            document.onmouseup = () => document.onmousemove = null;
-            e.stopPropagation();
-        };
-
-        const rs = el.querySelector('.resizer');
-        rs.onmousedown = (e) => {
-            e.stopPropagation();
-            selectEl(el);
-            let sw = el.offsetWidth;
-            let sh = el.offsetHeight;
-            let sx = e.clientX;
-            let sy = e.clientY;
-            document.onmousemove = (me) => {
-                el.style.width = (sw + (me.clientX - sx)) + 'px';
-                el.style.height = (sh + (me.clientY - sy)) + 'px';
-                if(el.querySelector('canvas')) drawCanvas(el.querySelector('canvas'));
-            };
-            document.onmouseup = () => document.onmousemove = null;
-        };
-    }
-
-    function selectEl(el) {
-        document.querySelectorAll('.u-el').forEach(i => i.classList.remove('active'));
-        activeEl = el;
-        el.classList.add('active');
-        updateUI();
-    }
-
-    function updateUI() {
-        if(!activeEl) return;
-        document.getElementById('active-name').innerText = activeEl.id;
-        
-        const btn = document.getElementById('visible-btn');
-        if(activeEl.id.startsWith('Target')) {
-            btn.disabled = true; btn.style.opacity = 0.5;
-        } else {
-            btn.disabled = false; btn.style.opacity = 1;
-            btn.innerText = activeEl.classList.contains('hidden-layer') ? "已隐藏 (Hidden)" : "显示中 (Visible)";
-            btn.className = activeEl.classList.contains('hidden-layer') ? "btn btn-toggle" : "btn btn-toggle on";
+    }else if(tex==='money-usd'||tex==='money-eur'){
+        const symbol=tex==='money-usd'?'$':'€';
+        for(let x=0;x<cvs.width;x+=texSize*2){
+            for(let y=0;y<cvs.height;y+=texSize*2){
+                ctx.fillText(symbol,x,y);
+            }
+        }
+    }else if(tex==='metal-grid'){
+        ctx.strokeStyle='rgba(0,0,0,0.15)';
+        for(let i=0;i<cvs.width;i+=10){
+            ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,cvs.height);ctx.stroke();
+        }
+        for(let j=0;j<cvs.height;j+=10){
+            ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(cvs.width,j);ctx.stroke();
+        }
+    }else{
+        ctx.strokeStyle='rgba(0,0,0,0.15)';
+        for(let i=0;i<cvs.height;i+=4){
+            ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(cvs.width,i+1);ctx.stroke();
         }
     }
+    ctx.globalAlpha=1;
+}
 
-    function rgbToHex(rgb) {
-        const res = rgb.match(/\d+/g);
-        if(!res) return "#ffffff";
-        return "#" + res.slice(0,3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+function bindEvents(el){
+    el.onmousedown=(e)=>{
+        if(e.target.classList.contains('resizer'))return;
+        selectEl(el);
+        let ox=e.clientX-el.offsetLeft;
+        let oy=e.clientY-el.offsetTop;
+        document.onmousemove=(me)=>{
+            el.style.left=(me.clientX-ox)+'px';
+            el.style.top=(me.clientY-oy)+'px';
+        };
+        document.onmouseup=()=>document.onmousemove=null;
+        e.stopPropagation();
+    };
+    const rs=el.querySelector('.resizer');
+    rs.onmousedown=(e)=>{
+        e.stopPropagation();
+        selectEl(el);
+        let sw=el.offsetWidth;
+        let sh=el.offsetHeight;
+        let sx=e.clientX;
+        let sy=e.clientY;
+        document.onmousemove=(me)=>{
+            el.style.width=(sw+(me.clientX-sx))+'px';
+            el.style.height=(sh+(me.clientY-sy))+'px';
+            if(el.querySelector('canvas')) drawCanvas(el.querySelector('canvas'));
+        };
+        document.onmouseup=()=>document.onmousemove=null;
+    };
+}
+
+function selectEl(el){
+    document.querySelectorAll('.u-el').forEach(i=>i.classList.remove('active'));
+    activeEl=el;
+    el.classList.add('active');
+    updateUI();
+}
+
+function updateUI(){
+    if(!activeEl)return;
+    document.getElementById('active-name').innerText=activeEl.id;
+    const btn=document.getElementById('visible-btn');
+    if(activeEl.id.startsWith('Target')){
+        btn.disabled=true;btn.style.opacity=0.5;
+    }else{
+        btn.disabled=false;btn.style.opacity=1;
+        btn.innerText=activeEl.classList.contains('hidden-layer')?"已隐藏 (Hidden)":"显示中 (Visible)";
+        btn.className=activeEl.classList.contains('hidden-layer')?"btn btn-toggle":"btn btn-toggle on";
     }
+}
 
-    window.onload = init;
+// --- 导出HTML功能 ---
+function exportHTML(){
+    const htmlCode=document.documentElement.outerHTML;
+    const w=window.open('','_blank');
+    w.document.write(`<textarea id="export-code" readonly>${htmlCode}</textarea>
+    <button onclick="document.getElementById('export-code').select();document.execCommand('copy');alert('已复制HTML代码');" class="btn" style="margin-top:10px;">复制HTML</button>`);
+    w.document.close();
+}
+
+window.onload=init;
 </script>
 </body>
 </html>
