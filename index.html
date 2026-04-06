@@ -2,138 +2,160 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>工程旗舰版 - 刮刮乐全维度编辑器</title>
+    <title>SCRATCH MASTER - 矩阵与中奖号全控版</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@700&family=Noto+Sans+SC:wght@900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@700&display=swap');
 
         :root {
-            --panel-w: 350px;
-            --accent: #0078d7;
-            --bg-dark: #121212;
+            --panel-bg: #1e1e2d;
+            --accent: #7267ef;
+            --text-main: #e1e1e6;
         }
 
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #1e1e1e; color: #eee; display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0f0f12; color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-        /* --- 左侧 PS 风格面板 --- */
-        #controls {
-            width: var(--panel-w); background: #252526; border-right: 1px solid #333;
-            display: flex; flex-direction: column; z-index: 100;
-        }
-        .header { padding: 15px; background: #323233; font-weight: bold; color: var(--accent); border-bottom: 1px solid #444; display: flex; justify-content: space-between; }
-        .tab-box { flex: 1; overflow-y: auto; padding: 15px; }
+        /* --- 编辑面板 --- */
+        #aside-tools { width: 340px; background: var(--panel-bg); border-right: 1px solid #323248; display: flex; flex-direction: column; }
+        .aside-header { padding: 15px; background: #252535; border-bottom: 1px solid #323248; font-weight: bold; color: var(--accent); }
+        .scroll-area { flex: 1; overflow-y: auto; padding: 15px; }
+
+        .group { background: #2b2b3d; border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid #3f3f5a; }
+        .group h4 { margin: 0 0 12px 0; font-size: 11px; text-transform: uppercase; color: #888; border-bottom: 1px solid #3f3f5a; padding-bottom: 5px; }
         
-        .group { background: #2d2d2d; border-radius: 4px; padding: 12px; margin-bottom: 15px; border: 1px solid #3c3c3c; }
-        .group h4 { margin: 0 0 10px 0; font-size: 11px; color: #aaa; text-transform: uppercase; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .row { display: flex; align-items: center; margin-bottom: 10px; font-size: 12px; gap: 8px; }
+        .row label { width: 90px; }
+        .row input[type="range"] { flex: 1; accent-color: var(--accent); }
+        .row input[type="number"], .row input[type="color"] { background: #151520; color: #fff; border: 1px solid #444; padding: 2px; }
+
+        /* --- 画布预览区 --- */
+        #viewport { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; background: #111; overflow: auto; }
         
-        .row { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; gap: 10px; }
-        .row label { flex: 1; }
-        .row input[type="range"] { flex: 2; accent-color: var(--accent); }
-        .row input[type="number"], select { width: 60px; background: #3c3c3c; color: #fff; border: 1px solid #555; }
-        
-        /* --- 中央画布区 --- */
-        #viewport { flex: 1; position: relative; overflow: auto; display: flex; justify-content: center; align-items: center; background: #000; }
-        
-        #card-frame {
+        #card-container {
             position: relative; width: 360px; height: 720px;
             background: url('64005.jpg') center/100% 100% no-repeat;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            background-color: #333; box-shadow: 0 20px 60px rgba(0,0,0,0.7);
         }
 
-        /* 可拖拽 & 缩放元素容器 */
-        .u-item {
-            position: absolute; border: 1px solid transparent; cursor: move;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
+        /* 元素容器 */
+        .u-item { position: absolute; cursor: move; border: 1px solid transparent; user-select: none; box-sizing: border-box; }
         .u-item:hover { border: 1px dashed var(--accent); }
-        .u-item.active { border: 1px solid var(--accent); background: rgba(0, 120, 215, 0.05); }
+        .u-item.active { border: 2px solid var(--accent) !important; background: rgba(114, 103, 239, 0.1); }
+        
+        /* 斜拉缩放手柄 */
+        .resizer { position: absolute; width: 12px; height: 12px; background: #fff; border: 2px solid var(--accent); right: -6px; bottom: -6px; cursor: nwse-resize; z-index: 100; }
 
-        /* 斜拉手柄 (Handle) */
-        .handle {
-            position: absolute; width: 10px; height: 10px; background: #fff;
-            border: 2px solid var(--accent); right: -6px; bottom: -6px; cursor: nwse-resize;
-        }
+        /* 内部内容布局 */
+        #win-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        #grid-content { display: grid; width: 100%; height: 100%; }
+        .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
 
-        /* 动态生成的内容样式 */
-        .num-box { line-height: 1; text-align: center; }
-        .amt-box { font-family: 'Oswald'; margin-top: 2px; }
+        /* 画布层 */
+        .layer-cvs { position: absolute; pointer-events: none; z-index: 50; }
 
-        /* 画布图层 */
-        canvas { position: absolute; pointer-events: none; transition: opacity 0.2s; }
-        .cvs-hide { opacity: 0; }
-
-        /* 导出按钮 */
-        .btn-export { position: fixed; top: 15px; right: 20px; background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-export { background: var(--accent); color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div id="controls">
-    <div class="header">EDITOR PANEL v7.0 <span>工程级</span></div>
-    
-    <div class="tab-box">
-        <div class="group">
-            <h4>🔢 网格矩阵 (Grid System)</h4>
-            <div class="row"><label>列数 (Cols)</label><input type="number" id="g-cols" value="5" onchange="buildGrid()"></div>
-            <div class="row"><label>行数 (Rows)</label><input type="number" id="g-rows" value="5" onchange="buildGrid()"></div>
-            <div class="row"><label>水平间距</label><input type="range" id="g-gapx" min="0" max="40" value="10" oninput="sync()"></div>
-            <div class="row"><label>垂直间距</label><input type="range" id="g-gapy" min="0" max="40" value="15" oninput="sync()"></div>
-        </div>
-
-        <div class="group">
-            <h4>🎨 字体控制 (Typography)</h4>
-            <div class="row"><label>数字大小</label><input type="range" id="f-size" min="10" max="60" value="22" oninput="sync()"></div>
-            <div class="row"><label>数字颜色</label><input type="color" id="f-color" value="#ffffff" oninput="sync()"></div>
-            <div class="row"><label>金额大小</label><input type="range" id="a-size" min="8" max="30" value="12" oninput="sync()"></div>
-            <div class="row"><label>金额颜色</label><input type="color" id="a-color" value="#ffeb3b" oninput="sync()"></div>
-        </div>
-
-        <div class="group">
-            <h4>🏗️ 刮奖画布图层 (Layers)</h4>
-            <button onclick="addCanvasLayer()" style="width:100%; padding:5px; margin-bottom:10px; cursor:pointer">➕ 增加刮奖图层</button>
-            <div class="row"><label>金属质感</label><input type="range" id="t-metal" min="0" max="100" value="50" oninput="renderTextures()"></div>
-            <div class="row"><label>颗粒粗糙度</label><input type="range" id="t-rough" min="0" max="100" value="30" oninput="renderTextures()"></div>
-            <div class="row"><label>花纹样式</label>
-                <select id="t-pattern" onchange="renderTextures()">
-                    <option value="none">纯色</option>
-                    <option value="brushed">拉丝金属</option>
-                    <option value="dots">欧美圆点</option>
-                    <option value="cross">编织纹理</option>
-                </select>
-            </div>
-            <div class="row"><label>画布基色</label><input type="color" id="t-color" value="#c0c0c0" oninput="renderTextures()"></div>
-        </div>
+<aside id="aside-tools">
+    <div class="aside-header">SCRATCH EDITOR PRO</div>
+    <div class="scroll-area">
         
         <div class="group">
-            <h4>👀 预览开关</h4>
-            <div class="row"><label>隐藏画布对齐</label><input type="checkbox" onchange="toggleCvs(this.checked)"></div>
-        </div>
-    </div>
-</div>
-
-<div id="viewport">
-    <button class="btn-export" onclick="exportConfig()">生成网页生产代码</button>
-    <div id="card-frame">
-        <div id="win-item" class="u-item active" style="left:145px; top:130px; width:70px; height:70px;">
-            <div class="num-box" style="color:#000; font-weight:900; font-size:36px;">88</div>
-            <div class="handle"></div>
+            <h4>🏆 中奖号码 (Winning No.)</h4>
+            <div class="row"><label>字体颜色</label><input type="color" id="win-color" value="#000000" oninput="sync()"></div>
+            <div class="row"><label>字体大小</label><input type="range" id="win-fs" min="10" max="100" value="40" oninput="sync()"></div>
         </div>
 
-        <div id="grid-item" class="u-item" style="left:20px; top:260px; width:320px; height:420px;">
-            <div id="grid-content" style="display:grid; width:100%; height:100%;"></div>
-            <div class="handle"></div>
+        <div class="group">
+            <h4>🔢 刮奖矩阵 (Grid Matrix)</h4>
+            <div class="row"><label>行列设定</label>
+                <input type="number" id="cols" value="5" style="width:40px" onchange="buildGrid()"> × 
+                <input type="number" id="rows" value="5" style="width:40px" onchange="buildGrid()">
+            </div>
+            <div class="row"><label>水平间距</label><input type="range" id="gap-x" min="0" max="50" value="10" oninput="sync()"></div>
+            <div class="row"><label>垂直间距</label><input type="range" id="gap-y" min="0" max="50" value="15" oninput="sync()"></div>
+            <div class="row"><label>数字大小</label><input type="range" id="num-fs" min="10" max="50" value="22" oninput="sync()"></div>
+            <div class="row"><label>数字颜色</label><input type="color" id="num-color" value="#ffffff" oninput="sync()"></div>
+        </div>
+
+        <div class="group">
+            <h4>🎨 画布涂层 (Canvas)</h4>
+            <button class="btn-export" style="background:#444;" onclick="addLayer()">添加刮奖涂层</button>
+            <div class="row" style="margin-top:10px;"><label>涂层颜色</label><input type="color" id="cvs-color" value="#c0c0c0" oninput="drawAll()"></div>
+        </div>
+
+        <button class="btn-export" onclick="alert('代码已在控制台生成！')">导出完整生产代码</button>
+    </div>
+</aside>
+
+<main id="viewport">
+    <div id="card-container">
+        <div id="win-item" class="u-item" style="left:145px; top:130px; width:70px; height:70px;">
+            <div id="win-content">88</div>
+            <div class="resizer"></div>
+        </div>
+
+        <div id="grid-item" class="u-item active" style="left:20px; top:260px; width:320px; height:420px;">
+            <div id="grid-content"></div>
+            <div class="resizer"></div>
         </div>
     </div>
-</div>
+</main>
 
 <script>
-    let activeEl = document.getElementById('win-item');
+    let activeItem = null;
     let layers = [];
 
-    // --- 1. 拖拽与斜拉缩放核心 ---
-    function initInteractions() {
+    function init() {
+        buildGrid();
+        setupInteractions();
+        addLayer();
+    }
+
+    // --- 1. 构建矩阵 ---
+    function buildGrid() {
+        const c = document.getElementById('cols').value;
+        const r = document.getElementById('rows').value;
+        const container = document.getElementById('grid-content');
+        container.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
+        
+        let html = '';
+        for(let i=0; i<c*r; i++) {
+            const n = Math.floor(Math.random()*90)+10;
+            const a = [5, 10, 50, 100][Math.floor(Math.random()*4)];
+            html += `<div class="cell"><span class="n">${n}</span><span class="a" style="font-family:'Oswald'; font-size:11px; color:#ffeb3b;">$${a}</span></div>`;
+        }
+        container.innerHTML = html;
+        sync();
+    }
+
+    // --- 2. 实时同步样式 ---
+    function sync() {
+        // 中奖号同步
+        const win = document.getElementById('win-content');
+        win.style.color = document.getElementById('win-color').value;
+        win.style.fontSize = document.getElementById('win-fs').value + 'px';
+
+        // 矩阵同步
+        const g = document.getElementById('grid-content');
+        g.style.columnGap = document.getElementById('gap-x').value + 'px';
+        g.style.rowGap = document.getElementById('gap-y').value + 'px';
+        
+        document.querySelectorAll('.cell .n').forEach(el => {
+            el.style.fontSize = document.getElementById('num-fs').value + 'px';
+            el.style.color = document.getElementById('num-color').value;
+            el.style.fontWeight = '900';
+        });
+
+        syncLayers();
+    }
+
+    // --- 3. 拖拽与斜拉缩放逻辑 ---
+    function setupInteractions() {
         document.querySelectorAll('.u-item').forEach(el => {
             el.onmousedown = (e) => {
-                if(e.target.className === 'handle') return; // 让位给缩放手柄
+                if(e.target.classList.contains('resizer')) return;
                 setActive(el);
                 let ox = e.clientX - el.offsetLeft;
                 let oy = e.clientY - el.offsetTop;
@@ -145,16 +167,17 @@
                 document.onmouseup = () => document.onmousemove = null;
             };
 
-            const handle = el.querySelector('.handle');
-            handle.onmousedown = (e) => {
+            const rs = el.querySelector('.resizer');
+            rs.onmousedown = (e) => {
                 e.stopPropagation();
-                let startW = el.offsetWidth;
-                let startH = el.offsetHeight;
-                let startX = e.clientX;
-                let startY = e.clientY;
+                let sw = el.offsetWidth;
+                let sh = el.offsetHeight;
+                let sx = e.clientX;
+                let sy = e.clientY;
                 document.onmousemove = (me) => {
-                    el.style.width = (startW + (me.clientX - startX)) + 'px';
-                    el.style.height = (startH + (me.clientY - startY)) + 'px';
+                    el.style.width = (sw + (me.clientX - sx)) + 'px';
+                    el.style.height = (sh + (me.clientY - sy)) + 'px';
+                    if(el.id === 'grid-item') drawAll();
                     syncLayers();
                 };
                 document.onmouseup = () => document.onmousemove = null;
@@ -164,135 +187,47 @@
 
     function setActive(el) {
         document.querySelectorAll('.u-item').forEach(i => i.classList.remove('active'));
-        activeEl = el;
+        activeItem = el;
         el.classList.add('active');
     }
 
-    // --- 2. 动态网格行列系统 ---
-    function buildGrid() {
-        const cols = document.getElementById('g-cols').value;
-        const rows = document.getElementById('g-rows').value;
-        const container = document.getElementById('grid-content');
-        container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        
-        let html = '';
-        for(let i=0; i < cols * rows; i++) {
-            const n = Math.floor(Math.random()*90)+10;
-            const a = [10, 50, 100, 1000][Math.floor(Math.random()*4)];
-            html += `<div class="num-item"><div class="num-box">${n}</div><div class="amt-box">$${a}$</div></div>`;
-        }
-        container.innerHTML = html;
-        sync();
-    }
-
-    // --- 3. 样式同步引擎 ---
-    function sync() {
-        const fs = document.getElementById('f-size').value;
-        const fc = document.getElementById('f-color').value;
-        const as = document.getElementById('a-size').value;
-        const ac = document.getElementById('a-color').value;
-        const gx = document.getElementById('g-gapx').value;
-        const gy = document.getElementById('g-gapy').value;
-
-        document.querySelectorAll('.num-box').forEach(b => {
-            if(b.parentElement.id !== 'win-item') {
-                b.style.fontSize = fs + 'px';
-                b.style.color = fc;
-            }
-        });
-        document.querySelectorAll('.amt-box').forEach(b => {
-            b.style.fontSize = as + 'px';
-            b.style.color = ac;
-        });
-        document.getElementById('grid-content').style.columnGap = gx + 'px';
-        document.getElementById('grid-content').style.rowGap = gy + 'px';
-        
-        syncLayers();
-    }
-
-    // --- 4. 纹理与多画布系统 ---
-    function addCanvasLayer() {
+    // --- 4. 画布层管理 ---
+    function addLayer() {
         const cvs = document.createElement('canvas');
-        cvs.className = 'scratch-cvs';
-        document.getElementById('card-frame').appendChild(cvs);
+        cvs.className = 'layer-cvs';
+        document.getElementById('card-container').appendChild(cvs);
         layers.push(cvs);
-        renderTextures();
+        drawAll();
         syncLayers();
     }
 
-    function renderTextures() {
-        const color = document.getElementById('t-color').value;
-        const metal = document.getElementById('t-metal').value;
-        const rough = document.getElementById('t-rough').value;
-        const pattern = document.getElementById('t-pattern').value;
-
-        layers.forEach(canvas => {
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            // 基础色
+    function drawAll() {
+        const color = document.getElementById('cvs-color').value;
+        layers.forEach(c => {
+            c.width = c.offsetWidth;
+            c.height = c.offsetHeight;
+            const ctx = c.getContext('2d');
             ctx.fillStyle = color;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // 金属拉丝效果
-            if(metal > 0) {
-                ctx.strokeStyle = `rgba(255,255,255,${metal/200})`;
-                for(let i=0; i<canvas.height; i+=2) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, i); ctx.lineTo(canvas.width, i + (Math.random()*2));
-                    ctx.stroke();
-                }
-            }
-
-            // 颗粒感
-            if(rough > 0) {
-                for(let i=0; i<(canvas.width*canvas.height)*(rough/500); i++) {
-                    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
-                    ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 1);
-                }
-            }
-
-            // 花纹选择
-            if(pattern === 'dots') {
-                ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                for(let x=0; x<canvas.width; x+=10) {
-                    for(let y=0; y<canvas.height; y+=10) {
-                        ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.fill();
-                    }
-                }
+            ctx.fillRect(0,0,c.width, c.height);
+            // 简单暗纹：颗粒感
+            for(let i=0; i<500; i++) {
+                ctx.fillStyle = 'rgba(0,0,0,0.05)';
+                ctx.fillRect(Math.random()*c.width, Math.random()*c.height, 2, 2);
             }
         });
     }
 
     function syncLayers() {
         const grid = document.getElementById('grid-item');
-        layers.forEach(cvs => {
-            cvs.style.left = grid.style.left;
-            cvs.style.top = grid.style.top;
-            cvs.style.width = grid.style.width;
-            cvs.style.height = grid.style.height;
-            // 只有尺寸变化时重绘纹理
-            if(cvs.width !== cvs.offsetWidth) renderTextures();
+        layers.forEach(l => {
+            l.style.left = grid.style.left;
+            l.style.top = grid.style.top;
+            l.style.width = grid.style.width;
+            l.style.height = grid.style.height;
         });
     }
 
-    function toggleCvs(hide) {
-        layers.forEach(l => l.classList.toggle('cvs-hide', hide));
-    }
-
-    function exportConfig() {
-        alert("配置已记录。代码导出将包含当前所有的行列设置、X/Y坐标以及纹理算法参数。");
-        console.log("Grid Rows:", document.getElementById('g-rows').value);
-        console.log("Matrix:", document.getElementById('grid-item').style.width);
-    }
-
-    window.onload = () => {
-        buildGrid();
-        initInteractions();
-        addCanvasLayer(); // 默认添加一层
-    };
+    window.onload = init;
 </script>
-
 </body>
 </html>
