@@ -1,0 +1,296 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>刮刮乐可视化生产编辑器</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@700&family=Noto+Sans+SC:wght@900&display=swap');
+
+        :root {
+            --primary: #ff4444;
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+        }
+
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg-dark); color: #fff; display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- 左侧编辑面板 --- */
+        #editor-aside {
+            width: 350px; background: var(--panel-bg); border-right: 1px solid #333;
+            display: flex; flex-direction: column; box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+        }
+        .panel-header { padding: 20px; background: #252525; border-bottom: 1px solid #333; font-weight: 900; color: var(--primary); display: flex; justify-content: space-between; }
+        .scroll-area { flex: 1; overflow-y: auto; padding: 15px; }
+        
+        .control-group { background: #2a2a2a; border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid #333; }
+        .control-group h4 { margin: 0 0 12px 0; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .prop-row { display: flex; align-items: center; margin-bottom: 10px; justify-content: space-between; font-size: 13px; }
+        .prop-row label { flex: 1; color: #bbb; }
+        .prop-row input[type="range"] { flex: 1.5; accent-color: var(--primary); }
+        .prop-row input[type="number"] { width: 50px; background: #333; border: 1px solid #444; color: #fff; padding: 3px; }
+        .prop-row select { width: 100px; background: #333; border: 1px solid #444; color: #fff; }
+        .prop-row input[type="color"] { border: none; background: none; width: 30px; cursor: pointer; }
+
+        /* --- 中央预览舞台 --- */
+        #main-stage { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: auto; background: #0a0a0a; }
+        
+        #card-container {
+            position: relative; width: 360px; height: 720px;
+            background: url('64005.jpg') center/100% 100% no-repeat;
+            background-color: #333; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* 拖拽代理类 */
+        .draggable {
+            position: absolute; cursor: move; user-select: none;
+            outline: 1px dashed transparent; transition: outline 0.2s;
+        }
+        .draggable:hover { outline: 1px dashed rgba(255,255,255,0.5); }
+        .draggable.active { outline: 2px solid var(--primary) !important; z-index: 100; }
+
+        /* 元素样式 */
+        #win-zone { display: flex; justify-content: center; align-items: center; font-weight: 900; }
+        #grid-zone { display: grid; grid-template-columns: repeat(5, 1fr); }
+        .slot { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .slot-n { font-weight: 900; line-height: 1; }
+        .slot-a { font-family: 'Oswald'; font-weight: 700; }
+
+        /* 画布 */
+        canvas { position: absolute; pointer-events: none; opacity: 0.5; border: 1px solid rgba(0,255,204,0.3); }
+        .canvas-hidden { display: none; }
+
+        /* 导出代码弹窗 */
+        #code-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000;
+            display: none; padding: 40px;
+        }
+        #code-area { width: 100%; height: 80%; background: #1e1e1e; color: #00ffcc; font-family: monospace; padding: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: var(--primary); color: white; }
+    </style>
+</head>
+<body>
+
+<aside id="editor-aside">
+    <div class="panel-header">
+        <span>LAYOUT EDITOR</span>
+        <button class="btn-primary" style="padding:4px 8px; font-size:11px" onclick="exportCode()">生成代码</button>
+    </div>
+    
+    <div class="scroll-area">
+        <div class="control-group">
+            <h4>� �\�:</h4>
+            <p style="font-size:11px; color:#666; margin:0;">1. 直接在预览区拖动数字或网格位置<br>2. 点击元素进行精细参数调节</p>
+        </div>
+
+        <div class="control-group">
+            <h4>� -V:�n (Winning)</h4>
+            <div class="prop-row"><label>字体</label>
+                <select id="win-font" onchange="sync()">
+                    <option value="Montserrat">Montserrat</option>
+                    <option value="Noto Sans SC">中文字体</option>
+                </select>
+            </div>
+            <div class="prop-row"><label>大小</label><input type="range" id="win-fs" min="10" max="80" value="36" oninput="sync()"></div>
+            <div class="prop-row"><label>颜色</label><input type="color" id="win-color" value="#000000" oninput="sync()"></div>
+        </div>
+
+        <div class="control-group">
+            <h4>� .VQ< (Main Grid)</h4>
+            <div class="prop-row"><label>宽度</label><input type="range" id="grid-w" min="200" max="360" value="320" oninput="sync()"></div>
+            <div class="prop-row"><label>水平间距</label><input type="range" id="gap-x" min="0" max="40" value="10" oninput="sync()"></div>
+            <div class="prop-row"><label>垂直间距</label><input type="range" id="gap-y" min="0" max="50" value="20" oninput="sync()"></div>
+        </div>
+
+        <div class="control-group">
+            <h4>" pW�� (Slots)</h4>
+            <div class="prop-row"><label>数字大小</label><input type="range" id="num-fs" min="10" max="40" value="22" oninput="sync()"></div>
+            <div class="prop-row"><label>奖金大小</label><input type="range" id="amt-fs" min="8" max="24" value="12" oninput="sync()"></div>
+            <div class="prop-row"><label>数字颜色</label><input type="color" id="num-color" value="#ffffff" oninput="sync()"></div>
+            <div class="prop-row"><label>奖金颜色</label><input type="color" id="amt-color" value="#d32f2f" oninput="sync()"></div>
+        </div>
+
+        <div class="control-group">
+            <h4>+ .B��</h4>
+            <div class="prop-row"><label>显示涂层范围</label><input type="checkbox" id="show-cvs" checked onchange="sync()"></div>
+            <div class="prop-row"><label>主涂层高度</label><input type="range" id="cvs-h" min="100" max="600" value="420" oninput="sync()"></div>
+        </div>
+    </div>
+</aside>
+
+<main id="main-stage">
+    <div id="card-container">
+        <div id="win-zone" class="draggable" style="left:145px; top:135px; width:70px; height:70px;">88</div>
+        <div id="grid-zone" class="draggable" style="left:20px; top:260px;"></div>
+        
+        <canvas id="cvs-win-prev"></canvas>
+        <canvas id="cvs-main-prev"></canvas>
+    </div>
+</main>
+
+<div id="code-modal">
+    <h2 style="margin-top:0">� ���</h2>
+    <p>已根据你的视觉排版优化 CSS 和布局参数。点击下方复制代码即可直接使用。</p>
+    <textarea id="code-area" readonly></textarea>
+    <div style="margin-top:20px; text-align:right">
+        <button class="btn" onclick="document.getElementById('code-modal').style.display='none'">关闭</button>
+        <button class="btn btn-primary" onclick="copyCode()">复制代码</button>
+    </div>
+</div>
+
+<script>
+    // --- 核心配置状态 ---
+    const state = {
+        win: { x: 145, y: 135, fs: 36, color: '#000000', font: 'Montserrat' },
+        grid: { x: 20, y: 260, w: 320, gapX: 10, gapY: 20 },
+        num: { fs: 22, color: '#ffffff', amtFs: 12, amtColor: '#d32f2f' },
+        cvs: { h: 420, show: true }
+    };
+
+    // --- 可视化拖拽引擎 ---
+    let activeEl = null;
+    let startX, startY;
+
+    function initDraggable() {
+        document.querySelectorAll('.draggable').forEach(el => {
+            el.onmousedown = (e) => {
+                activeEl = el;
+                el.classList.add('active');
+                const rect = el.getBoundingClientRect();
+                startX = e.clientX - el.offsetLeft;
+                startY = e.clientY - el.offsetTop;
+                e.stopPropagation();
+            };
+        });
+
+        window.onmousemove = (e) => {
+            if (!activeEl) return;
+            let x = e.clientX - startX;
+            let y = e.clientY - startY;
+            
+            activeEl.style.left = x + 'px';
+            activeEl.style.top = y + 'px';
+            
+            // 更新状态
+            if(activeEl.id === 'win-zone') { state.win.x = x; state.win.y = y; }
+            if(activeEl.id === 'grid-zone') { state.grid.x = x; state.grid.y = y; }
+            syncCanvas();
+        };
+
+        window.onmouseup = () => {
+            if(activeEl) activeEl.classList.remove('active');
+            activeEl = null;
+        };
+    }
+
+    // --- 数据同步渲染 ---
+    function sync() {
+        // 读取面板值
+        state.win.fs = document.getElementById('win-fs').value;
+        state.win.color = document.getElementById('win-color').value;
+        state.win.font = document.getElementById('win-font').value;
+        
+        state.grid.w = document.getElementById('grid-w').value;
+        state.grid.gapX = document.getElementById('gap-x').value;
+        state.grid.gapY = document.getElementById('gap-y').value;
+
+        state.num.fs = document.getElementById('num-fs').value;
+        state.num.amtFs = document.getElementById('amt-fs').value;
+        state.num.color = document.getElementById('num-color').value;
+        state.num.amtColor = document.getElementById('amt-color').value;
+        state.cvs.h = document.getElementById('cvs-h').value;
+        state.cvs.show = document.getElementById('show-cvs').checked;
+
+        // 应用样式
+        const wz = document.getElementById('win-zone');
+        wz.style.fontSize = state.win.fs + 'px';
+        wz.style.color = state.win.color;
+        wz.style.fontFamily = state.win.font;
+
+        const gz = document.getElementById('grid-zone');
+        gz.style.width = state.grid.w + 'px';
+        gz.style.columnGap = state.grid.gapX + 'px';
+        gz.style.rowGap = state.grid.gapY + 'px';
+
+        document.querySelectorAll('.slot-n').forEach(n => {
+            n.style.fontSize = state.num.fs + 'px';
+            n.style.color = state.num.color;
+        });
+        document.querySelectorAll('.slot-a').forEach(a => {
+            a.style.fontSize = state.num.amtFs + 'px';
+            a.style.color = state.num.amtColor;
+        });
+
+        syncCanvas();
+    }
+
+    function syncCanvas() {
+        const cvsW = document.getElementById('cvs-win-prev');
+        const cvsM = document.getElementById('cvs-main-prev');
+        
+        if(!state.cvs.show) {
+            cvsW.classList.add('canvas-hidden');
+            cvsM.classList.add('canvas-hidden');
+            return;
+        }
+        cvsW.classList.remove('canvas-hidden');
+        cvsM.classList.remove('canvas-hidden');
+
+        cvsW.style.left = state.win.x + 'px';
+        cvsW.style.top = state.win.y + 'px';
+        cvsW.width = 70; cvsW.height = 70;
+
+        cvsM.style.left = state.grid.x + 'px';
+        cvsM.style.top = state.grid.y - 10 + 'px';
+        cvsM.width = state.grid.w; cvsM.height = state.cvs.h;
+    }
+
+    // --- 初始化网格 ---
+    function initGrid() {
+        const gz = document.getElementById('grid-zone');
+        let html = '';
+        for(let i=0; i<30; i++) {
+            const n = Math.floor(Math.random()*90)+10;
+            const a = [5,10,20,50,100][Math.floor(Math.random()*5)];
+            html += `<div class="slot"><div class="slot-n">${n}</div><div class="slot-a">$${a}$</div></div>`;
+        }
+        gz.innerHTML = html;
+    }
+
+    // --- 代码导出系统 ---
+    function exportCode() {
+        const code = `
+<div id="scratch-card" style="position:relative; width:360px; height:720px; background:url('64005.jpg') center/100% 100%;">
+    <div id="win-val" style="position:absolute; left:${state.win.x}px; top:${state.win.y}px; width:70px; height:70px; display:flex; justify-content:center; align-items:center; font-size:${state.win.fs}px; color:${state.win.color}; font-family:'${state.win.font}'; font-weight:900;">88</div>
+    
+    <div id="grid-val" style="position:absolute; left:${state.grid.x}px; top:${state.grid.y}px; width:${state.grid.w}px; display:grid; grid-template-columns:repeat(5,1fr); column-gap:${state.grid.gapX}px; row-gap:${state.grid.gapY}px;">
+        ${document.getElementById('grid-zone').innerHTML}
+    </div>
+</div>
+
+<style>
+    .slot { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .slot-n { font-size:${state.num.fs}px; color:${state.num.color}; font-weight:900; }
+    .slot-a { font-size:${state.num.amtFs}px; color:${state.num.amtColor}; font-weight:700; font-family:'Oswald'; }
+</style>
+        `;
+        document.getElementById('code-area').value = code.trim();
+        document.getElementById('code-modal').style.display = 'block';
+    }
+
+    function copyCode() {
+        const area = document.getElementById('code-area');
+        area.select();
+        document.execCommand('copy');
+        alert('代码已复制！');
+    }
+
+    window.onload = () => {
+        initGrid();
+        initDraggable();
+        sync();
+    };
+</script>
+</body>
+</html>
