@@ -2,229 +2,278 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>SCRATCH MASTER - 矩阵与中奖号全控版</title>
+    <title>SCRATCH STUDIO v10.0 - 完美中轴对齐版</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@500;700&display=swap');
 
-        :root {
-            --panel-bg: #1e1e2d;
-            --accent: #7267ef;
-            --text-main: #e1e1e6;
-        }
+        :root { --panel: #1e1e2d; --accent: #7267ef; --bg: #0f0f12; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; display: flex; height: 100vh; overflow: hidden; }
 
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0f0f12; color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
-
-        /* --- 编辑面板 --- */
-        #aside-tools { width: 340px; background: var(--panel-bg); border-right: 1px solid #323248; display: flex; flex-direction: column; }
-        .aside-header { padding: 15px; background: #252535; border-bottom: 1px solid #323248; font-weight: bold; color: var(--accent); }
-        .scroll-area { flex: 1; overflow-y: auto; padding: 15px; }
-
-        .group { background: #2b2b3d; border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid #3f3f5a; }
-        .group h4 { margin: 0 0 12px 0; font-size: 11px; text-transform: uppercase; color: #888; border-bottom: 1px solid #3f3f5a; padding-bottom: 5px; }
+        /* --- 左侧控制面板 --- */
+        #aside { width: 320px; background: var(--panel); border-right: 1px solid #323248; display: flex; flex-direction: column; z-index: 100; }
+        .header { padding: 15px; background: #252535; font-weight: bold; color: var(--accent); border-bottom: 1px solid #323248; font-size: 14px; }
+        .scroll { flex: 1; overflow-y: auto; padding: 15px; }
         
-        .row { display: flex; align-items: center; margin-bottom: 10px; font-size: 12px; gap: 8px; }
-        .row label { width: 90px; }
-        .row input[type="range"] { flex: 1; accent-color: var(--accent); }
-        .row input[type="number"], .row input[type="color"] { background: #151520; color: #fff; border: 1px solid #444; padding: 2px; }
+        .group { background: #2b2b3d; border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid #3f3f5a; }
+        .group h4 { margin: 0 0 10px 0; font-size: 11px; color: #888; text-transform: uppercase; border-bottom: 1px solid #3f3f5a; padding-bottom: 5px; }
+        
+        .row { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; }
+        .row label { width: 90px; color: #aaa; }
+        .row input { flex: 1; background: #151520; color: #fff; border: 1px solid #444; padding: 3px; border-radius: 4px; }
+        .row input[type="range"] { accent-color: var(--accent); cursor: pointer; }
 
         /* --- 画布预览区 --- */
-        #viewport { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; background: #111; overflow: auto; }
-        
-        #card-container {
-            position: relative; width: 360px; height: 720px;
+        #viewport { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: auto; background: #111; }
+        #artboard { 
+            position: relative; width: 360px; height: 720px; 
             background: url('64005.jpg') center/100% 100% no-repeat;
-            background-color: #333; box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            background-color: #333; box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
 
-        /* 元素容器 */
-        .u-item { position: absolute; cursor: move; border: 1px solid transparent; user-select: none; box-sizing: border-box; }
-        .u-item:hover { border: 1px dashed var(--accent); }
-        .u-item.active { border: 2px solid var(--accent) !important; background: rgba(114, 103, 239, 0.1); }
-        
-        /* 斜拉缩放手柄 */
-        .resizer { position: absolute; width: 12px; height: 12px; background: #fff; border: 2px solid var(--accent); right: -6px; bottom: -6px; cursor: nwse-resize; z-index: 100; }
+        /* 可编辑元素通用样式 */
+        .u-el { position: absolute; cursor: move; border: 1px solid transparent; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .u-el:hover { border: 1px dashed var(--accent); }
+        .u-el.active { border: 2px solid var(--accent) !important; background: rgba(114, 103, 239, 0.1); }
 
-        /* 内部内容布局 */
-        #win-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; }
-        #grid-content { display: grid; width: 100%; height: 100%; }
-        .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        /* 斜拉手柄 */
+        .resizer { position: absolute; width: 12px; height: 12px; background: #fff; border: 2px solid var(--accent); right: -6px; bottom: -6px; cursor: nwse-resize; z-index: 100; border-radius: 50%; }
 
-        /* 画布层 */
-        .layer-cvs { position: absolute; pointer-events: none; z-index: 50; }
+        /* 核心优化：矩阵内部排版 */
+        .grid-box { display: grid; width: 100%; height: 100%; pointer-events: none; }
+        /* 关键：cell 内部强制居中对齐 */
+        .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; height: 100%; }
+        .val { font-family: 'Montserrat', sans-serif; font-weight: 900; line-height: 1; }
+        .amt { font-family: 'Oswald', sans-serif; font-weight: 700; line-height: 1.2; margin-top: 2px; }
 
-        .btn-export { background: var(--accent); color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        /* 中奖单数样式 */
+        .win-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        canvas { width: 100%; height: 100%; display: block; }
+        .btn { background: var(--accent); color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
     </style>
 </head>
 <body>
 
-<aside id="aside-tools">
-    <div class="aside-header">SCRATCH EDITOR PRO</div>
-    <div class="scroll-area">
-        
+<aside id="aside">
+    <div class="header">EDITOR PRO V10.0 - ALIGNMENT</div>
+    <div class="scroll">
         <div class="group">
-            <h4>🏆 中奖号码 (Winning No.)</h4>
-            <div class="row"><label>字体颜色</label><input type="color" id="win-color" value="#000000" oninput="sync()"></div>
-            <div class="row"><label>字体大小</label><input type="range" id="win-fs" min="10" max="100" value="40" oninput="sync()"></div>
+            <h4>🎯 当前选中：<span id="active-name" style="color:var(--accent)">未选择</span></h4>
+            <div class="row"><label>文字颜色</label><input type="color" id="p-color" oninput="applyProp()"></div>
+            <div class="row"><label>数字大小</label><input type="range" id="p-fs" min="10" max="120" oninput="applyProp()"></div>
+            <div class="row"><label>金额大小</label><input type="range" id="p-amt-fs" min="8" max="40" value="12" oninput="applyProp()"></div>
         </div>
 
         <div class="group">
-            <h4>🔢 刮奖矩阵 (Grid Matrix)</h4>
-            <div class="row"><label>行列设定</label>
-                <input type="number" id="cols" value="5" style="width:40px" onchange="buildGrid()"> × 
-                <input type="number" id="rows" value="5" style="width:40px" onchange="buildGrid()">
+            <h4>🔢 矩阵对齐控制</h4>
+            <div class="row"><label>列 × 行</label>
+                <input type="number" id="g-cols" value="5" style="width:40px" onchange="buildGrid()"> × 
+                <input type="number" id="g-rows" value="5" style="width:40px" onchange="buildGrid()">
             </div>
-            <div class="row"><label>水平间距</label><input type="range" id="gap-x" min="0" max="50" value="10" oninput="sync()"></div>
-            <div class="row"><label>垂直间距</label><input type="range" id="gap-y" min="0" max="50" value="15" oninput="sync()"></div>
-            <div class="row"><label>数字大小</label><input type="range" id="num-fs" min="10" max="50" value="22" oninput="sync()"></div>
-            <div class="row"><label>数字颜色</label><input type="color" id="num-color" value="#ffffff" oninput="sync()"></div>
+            <div class="row"><label>左右间距</label><input type="range" id="g-gapx" min="0" max="50" oninput="applyProp()"></div>
+            <div class="row"><label>上下间距</label><input type="range" id="g-gapy" min="0" max="50" oninput="applyProp()"></div>
         </div>
 
         <div class="group">
-            <h4>🎨 画布涂层 (Canvas)</h4>
-            <button class="btn-export" style="background:#444;" onclick="addLayer()">添加刮奖涂层</button>
-            <div class="row" style="margin-top:10px;"><label>涂层颜色</label><input type="color" id="cvs-color" value="#c0c0c0" oninput="drawAll()"></div>
+            <h4>🏗️ 图层管理</h4>
+            <button class="btn" onclick="addCanvasLayer()">添加刮奖画布 (独立位置)</button>
+            <div class="row" style="margin-top:10px;"><label>画布风格</label>
+                <select id="p-tex" onchange="applyProp()" style="flex:1; background:#151520; color:#fff; border:1px solid #444; padding:3px;">
+                    <option value="silver">经典拉丝银</option>
+                    <option value="gold">奢华磨砂金</option>
+                    <option value="dots">欧美点阵纹</option>
+                </select>
+            </div>
         </div>
 
-        <button class="btn-export" onclick="alert('代码已在控制台生成！')">导出完整生产代码</button>
+        <button class="btn" style="background:#28a745; margin-top:20px;">生成并复制 HTML 代码</button>
     </div>
 </aside>
 
 <main id="viewport">
-    <div id="card-container">
-        <div id="win-item" class="u-item" style="left:145px; top:130px; width:70px; height:70px;">
-            <div id="win-content">88</div>
+    <div id="artboard">
+        <div id="el-win" class="u-el" style="left:140px; top:130px; width:80px; height:100px; color:#000000;">
+            <div class="win-wrapper">
+                <div class="val" style="font-size:40px;">88</div>
+                <div class="amt" style="font-size:14px; color:#d32f2f;">WINNER</div>
+            </div>
             <div class="resizer"></div>
         </div>
 
-        <div id="grid-item" class="u-item active" style="left:20px; top:260px; width:320px; height:420px;">
-            <div id="grid-content"></div>
+        <div id="el-grid" class="u-el active" style="left:20px; top:260px; width:320px; height:400px; color:#ffffff;">
+            <div id="grid-inner" class="grid-box"></div>
             <div class="resizer"></div>
         </div>
     </div>
 </main>
 
 <script>
-    let activeItem = null;
-    let layers = [];
+    let activeEl = document.getElementById('el-grid');
+    let layerCount = 0;
 
     function init() {
         buildGrid();
-        setupInteractions();
-        addLayer();
+        bindEvents(document.getElementById('el-win'));
+        bindEvents(document.getElementById('el-grid'));
+        updateUI();
     }
 
-    // --- 1. 构建矩阵 ---
+    // --- 核心：矩阵生成与对齐 ---
     function buildGrid() {
-        const c = document.getElementById('cols').value;
-        const r = document.getElementById('rows').value;
-        const container = document.getElementById('grid-content');
-        container.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
+        const c = document.getElementById('g-cols').value;
+        const r = document.getElementById('g-rows').value;
+        const box = document.getElementById('grid-inner');
+        box.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
         
         let html = '';
         for(let i=0; i<c*r; i++) {
             const n = Math.floor(Math.random()*90)+10;
-            const a = [5, 10, 50, 100][Math.floor(Math.random()*4)];
-            html += `<div class="cell"><span class="n">${n}</span><span class="a" style="font-family:'Oswald'; font-size:11px; color:#ffeb3b;">$${a}</span></div>`;
+            const a = [5, 10, 20, 50, 100][Math.floor(Math.random()*5)];
+            // 每一个 cell 内部自带对齐逻辑
+            html += `
+                <div class="cell">
+                    <span class="val">${n}</span>
+                    <span class="amt">$${a}</span>
+                </div>`;
         }
-        container.innerHTML = html;
-        sync();
+        box.innerHTML = html;
+        applyProp();
     }
 
-    // --- 2. 实时同步样式 ---
-    function sync() {
-        // 中奖号同步
-        const win = document.getElementById('win-content');
-        win.style.color = document.getElementById('win-color').value;
-        win.style.fontSize = document.getElementById('win-fs').value + 'px';
+    // --- 属性应用 (包含居中对齐逻辑) ---
+    function applyProp() {
+        if(!activeEl) return;
 
-        // 矩阵同步
-        const g = document.getElementById('grid-content');
-        g.style.columnGap = document.getElementById('gap-x').value + 'px';
-        g.style.rowGap = document.getElementById('gap-y').value + 'px';
+        const color = document.getElementById('p-color').value;
+        const fs = document.getElementById('p-fs').value;
+        const amtFs = document.getElementById('p-amt-fs').value;
+
+        // 统一应用颜色和数字大小
+        activeEl.style.color = color;
         
-        document.querySelectorAll('.cell .n').forEach(el => {
-            el.style.fontSize = document.getElementById('num-fs').value + 'px';
-            el.style.color = document.getElementById('num-color').value;
-            el.style.fontWeight = '900';
-        });
+        if(activeEl.id === 'el-grid') {
+            const gx = document.getElementById('g-gapx').value;
+            const gy = document.getElementById('g-gapy').value;
+            const box = activeEl.querySelector('.grid-box');
+            box.style.columnGap = gx + 'px';
+            box.style.rowGap = gy + 'px';
 
-        syncLayers();
+            activeEl.querySelectorAll('.val').forEach(v => {
+                v.style.fontSize = fs + 'px';
+                v.style.color = color;
+            });
+            activeEl.querySelectorAll('.amt').forEach(a => {
+                a.style.fontSize = amtFs + 'px';
+            });
+        } else if(activeEl.id === 'el-win') {
+            activeEl.querySelector('.val').style.fontSize = fs + 'px';
+            activeEl.querySelector('.amt').style.fontSize = amtFs + 'px';
+            activeEl.querySelector('.val').style.color = color;
+        }
+
+        if(activeEl.classList.contains('cvs-layer')) {
+            drawCanvas(activeEl.querySelector('canvas'));
+        }
     }
 
-    // --- 3. 拖拽与斜拉缩放逻辑 ---
-    function setupInteractions() {
-        document.querySelectorAll('.u-item').forEach(el => {
-            el.onmousedown = (e) => {
-                if(e.target.classList.contains('resizer')) return;
-                setActive(el);
-                let ox = e.clientX - el.offsetLeft;
-                let oy = e.clientY - el.offsetTop;
-                document.onmousemove = (me) => {
-                    el.style.left = (me.clientX - ox) + 'px';
-                    el.style.top = (me.clientY - oy) + 'px';
-                    syncLayers();
-                };
-                document.onmouseup = () => document.onmousemove = null;
-            };
-
-            const rs = el.querySelector('.resizer');
-            rs.onmousedown = (e) => {
-                e.stopPropagation();
-                let sw = el.offsetWidth;
-                let sh = el.offsetHeight;
-                let sx = e.clientX;
-                let sy = e.clientY;
-                document.onmousemove = (me) => {
-                    el.style.width = (sw + (me.clientX - sx)) + 'px';
-                    el.style.height = (sh + (me.clientY - sy)) + 'px';
-                    if(el.id === 'grid-item') drawAll();
-                    syncLayers();
-                };
-                document.onmouseup = () => document.onmousemove = null;
-            };
-        });
-    }
-
-    function setActive(el) {
-        document.querySelectorAll('.u-item').forEach(i => i.classList.remove('active'));
-        activeItem = el;
-        el.classList.add('active');
-    }
-
-    // --- 4. 画布层管理 ---
-    function addLayer() {
+    // --- 画布逻辑 ---
+    function addCanvasLayer() {
+        layerCount++;
+        const newLayer = document.createElement('div');
+        newLayer.className = 'u-el cvs-layer';
+        newLayer.id = 'Layer_' + layerCount;
+        newLayer.style.cssText = `left:40px; top:${120 + (layerCount*40)}px; width:160px; height:90px; z-index:${100+layerCount};`;
+        
         const cvs = document.createElement('canvas');
-        cvs.className = 'layer-cvs';
-        document.getElementById('card-container').appendChild(cvs);
-        layers.push(cvs);
-        drawAll();
-        syncLayers();
+        newLayer.appendChild(cvs);
+        const rs = document.createElement('div');
+        rs.className = 'resizer';
+        newLayer.appendChild(rs);
+
+        document.getElementById('artboard').appendChild(newLayer);
+        bindEvents(newLayer);
+        selectEl(newLayer);
+        drawCanvas(cvs);
     }
 
-    function drawAll() {
-        const color = document.getElementById('cvs-color').value;
-        layers.forEach(c => {
-            c.width = c.offsetWidth;
-            c.height = c.offsetHeight;
-            const ctx = c.getContext('2d');
-            ctx.fillStyle = color;
-            ctx.fillRect(0,0,c.width, c.height);
-            // 简单暗纹：颗粒感
-            for(let i=0; i<500; i++) {
-                ctx.fillStyle = 'rgba(0,0,0,0.05)';
-                ctx.fillRect(Math.random()*c.width, Math.random()*c.height, 2, 2);
+    function drawCanvas(cvs) {
+        const parent = cvs.parentElement;
+        cvs.width = parent.offsetWidth;
+        cvs.height = parent.offsetHeight;
+        const ctx = cvs.getContext('2d');
+        const tex = document.getElementById('p-tex').value;
+        
+        ctx.fillStyle = (tex === 'gold') ? '#d4af37' : '#c0c0c0';
+        ctx.fillRect(0,0,cvs.width, cvs.height);
+        
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+        if(tex === 'dots') {
+            for(let i=0; i<cvs.width; i+=12) {
+                for(let j=0; j<cvs.height; j+=12) {
+                    ctx.beginPath(); ctx.arc(i,j,1.5,0,Math.PI*2); ctx.stroke();
+                }
             }
-        });
+        } else {
+            for(let i=0; i<cvs.height; i+=4) {
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(cvs.width, i+1); ctx.stroke();
+            }
+        }
     }
 
-    function syncLayers() {
-        const grid = document.getElementById('grid-item');
-        layers.forEach(l => {
-            l.style.left = grid.style.left;
-            l.style.top = grid.style.top;
-            l.style.width = grid.style.width;
-            l.style.height = grid.style.height;
-        });
+    // --- 交互系统 ---
+    function bindEvents(el) {
+        el.onmousedown = (e) => {
+            if(e.target.classList.contains('resizer')) return;
+            selectEl(el);
+            let ox = e.clientX - el.offsetLeft;
+            let oy = e.clientY - el.offsetTop;
+            document.onmousemove = (me) => {
+                el.style.left = (me.clientX - ox) + 'px';
+                el.style.top = (me.clientY - oy) + 'px';
+            };
+            document.onmouseup = () => document.onmousemove = null;
+            e.stopPropagation();
+        };
+
+        const rs = el.querySelector('.resizer');
+        rs.onmousedown = (e) => {
+            e.stopPropagation();
+            selectEl(el);
+            let sw = el.offsetWidth;
+            let sh = el.offsetHeight;
+            let sx = e.clientX;
+            let sy = e.clientY;
+            document.onmousemove = (me) => {
+                el.style.width = (sw + (me.clientX - sx)) + 'px';
+                el.style.height = (sh + (me.clientY - sy)) + 'px';
+                if(el.classList.contains('cvs-layer')) drawCanvas(el.querySelector('canvas'));
+            };
+            document.onmouseup = () => document.onmousemove = null;
+        };
+    }
+
+    function selectEl(el) {
+        document.querySelectorAll('.u-el').forEach(i => i.classList.remove('active'));
+        activeEl = el;
+        el.classList.add('active');
+        updateUI();
+    }
+
+    function updateUI() {
+        if(!activeEl) return;
+        document.getElementById('active-name').innerText = activeEl.id;
+        // 同步颜色和字号到滑块
+        const rgb = window.getComputedStyle(activeEl).color;
+        document.getElementById('p-color').value = rgbToHex(rgb);
+        const valSpan = activeEl.querySelector('.val');
+        if(valSpan) document.getElementById('p-fs').value = parseInt(window.getComputedStyle(valSpan).fontSize);
+    }
+
+    function rgbToHex(rgb) {
+        const res = rgb.match(/\d+/g);
+        if(!res) return "#ffffff";
+        return "#" + res.slice(0,3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
     }
 
     window.onload = init;
