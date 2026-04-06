@@ -2,25 +2,23 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>SCRATCH STUDIO v12.0 - 一键出码 & 欧美暗纹版</title>
+    <title>SCRATCH STUDIO v13.0 - 代码弹窗与一键复制</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Oswald:wght@500;700&family=Fira+Code:wght@400;500&display=swap');
 
-        :root { --panel: #1e1e2d; --accent: #7267ef; --bg: #0f0f12; }
+        :root { --panel: #1e1e2d; --accent: #7267ef; --bg: #0f0f12; --success: #28a745; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; display: flex; height: 100vh; overflow: hidden; }
 
         /* --- 左侧面板 --- */
         #aside { width: 340px; background: var(--panel); border-right: 1px solid #323248; display: flex; flex-direction: column; z-index: 100; }
-        .header { padding: 15px; background: #252535; border-bottom: 1px solid #323248; font-weight: bold; color: var(--accent); font-size: 14px; }
+        .header { padding: 15px; background: #252535; border-bottom: 1px solid #323248; font-weight: bold; color: var(--accent); }
         .scroll { flex: 1; overflow-y: auto; padding: 15px; }
-        
         .group { background: #2b2b3d; border-radius: 8px; padding: 12px; margin-bottom: 15px; border: 1px solid #3f3f5a; }
         .group h4 { margin: 0 0 10px 0; font-size: 11px; color: #888; text-transform: uppercase; border-bottom: 1px solid #3f3f5a; padding-bottom: 5px; }
-        
         .row { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; }
         .row label { width: 100px; color: #aaa; }
-        .row input, .row select { flex: 1; background: #151520; color: #fff; border: 1px solid #444; padding: 3px; border-radius: 4px; }
-        .row input[type="range"] { accent-color: var(--accent); cursor: pointer; }
+        .row input, .row select { flex: 1; background: #151520; color: #fff; border: 1px solid #444; padding: 4px; border-radius: 4px; }
+        .row input[type="range"] { accent-color: var(--accent); }
 
         /* --- 预览区 --- */
         #viewport { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; background: #111; }
@@ -34,56 +32,61 @@
         .u-el { position: absolute; cursor: move; border: 1px solid transparent; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .u-el:hover { border: 1px dashed var(--accent); }
         .u-el.active { border: 2px solid var(--accent) !important; background: rgba(114, 103, 239, 0.1); }
-        .u-el.hidden-layer { opacity: 0.15 !important; }
-
         .resizer { position: absolute; width: 12px; height: 12px; background: #fff; border: 2px solid var(--accent); right: -6px; bottom: -6px; cursor: nwse-resize; z-index: 100; border-radius: 50%; }
 
-        /* 内部排版 */
+        /* 矩阵排版 */
         .grid-box { display: grid; width: 100%; height: 100%; pointer-events: none; }
         .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         .val { font-family: 'Montserrat', sans-serif; font-weight: 900; line-height: 1; }
         .amt { font-family: 'Oswald', sans-serif; font-weight: 700; line-height: 1.2; }
 
         canvas { width: 100%; height: 100%; display: block; pointer-events: none; }
-        
         .btn { background: var(--accent); color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; }
-        .btn-gen { background: #28a745; font-size: 16px; padding: 15px; margin-top: 20px; border: 2px solid #1e7e34; }
-        .btn-gen:hover { background: #218838; }
+        .btn-gen { background: var(--success); font-size: 16px; padding: 15px; margin-top: 10px; }
+
+        /* --- 代码弹窗 (Popup) --- */
+        #code-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            display: none; justify-content: center; align-items: center; z-index: 2000;
+        }
+        #code-container {
+            width: 80%; height: 80%; background: #1e1e2e; border-radius: 12px; 
+            display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--accent);
+        }
+        .modal-header { padding: 15px; background: #252535; display: flex; justify-content: space-between; align-items: center; }
+        #code-display { 
+            flex: 1; background: #0d0d15; color: #a6accd; padding: 20px; 
+            font-family: 'Fira Code', monospace; font-size: 13px; overflow: auto; white-space: pre;
+        }
+        .copy-btn { background: var(--accent); color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <aside id="aside">
-    <div class="header">PRO SCRATCH EDITOR V12.0</div>
+    <div class="header">STUDIO V13.0 - PRO GENERATOR</div>
     <div class="scroll">
-        
         <div class="group">
-            <h4>🎯 图层设置</h4>
-            <div class="row">
-                <label>可见性</label>
-                <button id="vis-btn" class="btn" style="background:#444; font-size:11px;" onclick="toggleVis()">切换显示/隐藏</button>
-            </div>
+            <h4>🎯 涂层纹理控制</h4>
             <div class="row"><label>暗纹类型</label>
                 <select id="p-tex" onchange="applyProp()">
-                    <option value="usd">💲 美元纹理 (USD)</option>
-                    <option value="eur">💶 欧元纹理 (EUR)</option>
+                    <option value="usd">💲 美元符号 (USD Pattern)</option>
+                    <option value="eur">💶 欧元符号 (EUR Pattern)</option>
                     <option value="slash">📏 安全斜纹 (Slash)</option>
-                    <option value="dots">防伪点阵</option>
                 </select>
             </div>
-            <div class="row"><label>画布基色</label><input type="color" id="p-cvs-color" value="#c0c0c0" oninput="applyProp()"></div>
+            <div class="row"><label>涂层颜色</label><input type="color" id="p-cvs-color" value="#c0c0c0" oninput="applyProp()"></div>
         </div>
 
         <div class="group">
-            <h4>🔢 矩阵与字体</h4>
-            <div class="row"><label>数字大小</label><input type="range" id="p-fs" min="10" max="80" value="24" oninput="applyProp()"></div>
+            <h4>🔢 数字矩阵精调</h4>
             <div class="row"><label>数字颜色</label><input type="color" id="p-color" value="#ffffff" oninput="applyProp()"></div>
-            <div class="row"><label>列数</label><input type="number" id="g-cols" value="5" onchange="buildGrid()"></div>
-            <div class="row"><label>间距</label><input type="range" id="g-gap" min="0" max="40" value="10" oninput="applyProp()"></div>
+            <div class="row"><label>数字大小</label><input type="range" id="p-fs" min="10" max="80" value="26" oninput="applyProp()"></div>
+            <div class="row"><label>矩阵列数</label><input type="number" id="g-cols" value="5" onchange="buildGrid()"></div>
+            <div class="row"><label>行列间距</label><input type="range" id="g-gap" min="0" max="40" value="10" oninput="applyProp()"></div>
         </div>
 
-        <button class="btn btn-gen" onclick="exportFullHTML()">🚀 一键生成 HTML 文档</button>
-        <p style="font-size: 10px; color: #666; text-align: center; margin-top: 10px;">点击生成后，请查看浏览器下载或控制台</p>
+        <button class="btn btn-gen" onclick="showGeneratedCode()">⚡ 一键生成生产代码</button>
     </div>
 </aside>
 
@@ -100,6 +103,19 @@
     </div>
 </main>
 
+<div id="code-modal">
+    <div id="code-container">
+        <div class="modal-header">
+            <span>🚀 生成的生产环境代码 (Ready to Use)</span>
+            <div>
+                <button class="copy-btn" onclick="copyCode()">一键复制代码</button>
+                <button class="copy-btn" style="background:#ff4444; margin-left:10px;" onclick="closeModal()">关闭</button>
+            </div>
+        </div>
+        <div id="code-display"></div>
+    </div>
+</div>
+
 <script>
     let activeEl = document.getElementById('Target_Grid');
     let layerCount = 0;
@@ -108,7 +124,6 @@
         buildGrid();
         bindEvents(document.getElementById('Target_Win'));
         bindEvents(document.getElementById('Target_Grid'));
-        // 初始两层图层
         addLayerAt(140, 130, 80, 100, "Layer_Win");
         addLayerAt(20, 260, 320, 400, "Layer_Grid");
     }
@@ -130,32 +145,26 @@
 
     function drawCanvas(cvs) {
         const p = cvs.parentElement;
-        cvs.width = p.offsetWidth;
-        cvs.height = p.offsetHeight;
+        cvs.width = p.offsetWidth; cvs.height = p.offsetHeight;
         const ctx = cvs.getContext('2d');
         const type = document.getElementById('p-tex').value;
         const baseColor = document.getElementById('p-cvs-color').value;
 
         ctx.fillStyle = baseColor;
         ctx.fillRect(0,0,cvs.width, cvs.height);
+        ctx.fillStyle = "rgba(0,0,0,0.12)";
+        ctx.font = "bold 16px Arial";
         
-        ctx.fillStyle = "rgba(0,0,0,0.15)";
-        ctx.font = "14px Arial";
-        
-        if(type === 'usd' || type === 'eur') {
-            const char = type === 'usd' ? '$' : '€';
-            for(let i=0; i<cvs.width; i+=25) {
-                for(let j=0; j<cvs.height; j+=25) {
-                    ctx.save();
-                    ctx.translate(i, j);
-                    ctx.rotate(-0.3);
-                    ctx.fillText(char, 0, 0);
-                    ctx.restore();
+        const char = (type === 'usd') ? '$' : (type === 'eur' ? '€' : null);
+        if(char) {
+            for(let i=0; i<cvs.width+20; i+=30) {
+                for(let j=0; j<cvs.height+20; j+=30) {
+                    ctx.fillText(char, i, j);
                 }
             }
         } else if(type === 'slash') {
             ctx.strokeStyle = "rgba(0,0,0,0.1)";
-            for(let i=-cvs.height; i<cvs.width; i+=10) {
+            for(let i=-cvs.height; i<cvs.width; i+=12) {
                 ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i+cvs.height, cvs.height); ctx.stroke();
             }
         }
@@ -173,10 +182,7 @@
 
     function applyProp() {
         if(!activeEl) return;
-        const fs = document.getElementById('p-fs').value;
-        const clr = document.getElementById('p-color').value;
-        const gap = document.getElementById('g-gap').value;
-
+        const fs = document.getElementById('p-fs').value, clr = document.getElementById('p-color').value, gap = document.getElementById('g-gap').value;
         if(activeEl.id === 'Target_Grid') {
             activeEl.querySelector('.grid-box').style.gap = gap + 'px';
             activeEl.querySelectorAll('.val').forEach(v => { v.style.fontSize = fs+'px'; v.style.color = clr; });
@@ -185,20 +191,12 @@
         }
     }
 
-    function toggleVis() {
-        if(activeEl.classList.contains('cvs-layer')) {
-            activeEl.classList.toggle('hidden-layer');
-        }
-    }
-
     function bindEvents(el) {
         el.onmousedown = (e) => {
             if(e.target.className === 'resizer') return;
             selectEl(el);
             let ox = e.clientX - el.offsetLeft, oy = e.clientY - el.offsetTop;
-            document.onmousemove = (me) => {
-                el.style.left = (me.clientX-ox)+'px'; el.style.top = (me.clientY-oy)+'px';
-            };
+            document.onmousemove = (me) => { el.style.left = (me.clientX-ox)+'px'; el.style.top = (me.clientY-oy)+'px'; };
             document.onmouseup = () => document.onmousemove = null;
         };
         const rs = el.querySelector('.resizer');
@@ -213,78 +211,79 @@
         };
     }
 
-    function selectEl(el) {
-        document.querySelectorAll('.u-el').forEach(i=>i.classList.remove('active'));
-        activeEl = el; el.classList.add('active');
-    }
+    function selectEl(el) { document.querySelectorAll('.u-el').forEach(i=>i.classList.remove('active')); activeEl = el; el.classList.add('active'); }
 
-    // --- 核心功能：一键导出可交互 HTML ---
-    function exportFullHTML() {
-        const gridData = document.getElementById('Target_Grid').style.cssText;
-        const winData = document.getElementById('Target_Win').style.cssText;
-        const layers = Array.from(document.querySelectorAll('.cvs-layer')).map(l => ({
-            css: l.style.cssText,
-            tex: document.getElementById('p-tex').value,
-            color: document.getElementById('p-cvs-color').value
-        }));
+    // --- 弹窗与复制引擎 ---
+    function showGeneratedCode() {
+        const grid = document.getElementById('Target_Grid');
+        const win = document.getElementById('Target_Win');
+        const tex = document.getElementById('p-tex').value;
+        const cvsClr = document.getElementById('p-cvs-color').value;
+        
+        let layersHTML = '';
+        document.querySelectorAll('.cvs-layer').forEach(l => {
+            layersHTML += `<canvas class="scratch-layer" style="position:absolute; left:${l.style.left}; top:${l.style.top}; width:${l.offsetWidth}px; height:${l.offsetHeight}px; z-index:10;"></canvas>\n        `;
+        });
 
-        const finalHTML = `
-<!DOCTYPE html>
+        const code = `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Scratch Game Out</title>
     <style>
-        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        body { background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         #card { position: relative; width: 360px; height: 720px; background: #333 url('64005.jpg') center/100% 100%; overflow:hidden; }
         .grid-box { display: grid; grid-template-columns: repeat(${document.getElementById('g-cols').value}, 1fr); gap: ${document.getElementById('g-gap').value}px; width:100%; height:100%; }
-        .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .val { font-family: Montserrat; font-weight:900; font-size: ${document.getElementById('p-fs').value}px; color: ${document.getElementById('p-color').value}; }
-        .amt { font-family: Oswald; font-weight:700; color: #ff0; font-size: 14px; }
-        canvas { position: absolute; cursor: crosshair; z-index: 10; touch-action: none; }
+        .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .val { font-family: sans-serif; font-weight:900; font-size: ${document.getElementById('p-fs').value}px; color: ${document.getElementById('p-color').value}; line-height:1; }
+        .amt { font-family: sans-serif; font-weight:700; color: #ffeb3b; font-size: 14px; margin-top:2px; }
+        canvas { cursor: crosshair; touch-action: none; }
     </style>
 </head>
 <body>
     <div id="card">
-        <div style="${winData}"><div class="cell"><span class="val">88</span><span class="amt">WIN</span></div></div>
-        <div style="${gridData}"><div class="grid-box">${document.getElementById('grid-inner').innerHTML}</div></div>
-        ${layers.map(l => `<canvas class="scratch-layer" style="${l.css}"></canvas>`).join('')}
+        <div style="position:absolute; left:${win.style.left}; top:${win.style.top}; width:${win.offsetWidth}px; height:${win.offsetHeight}px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+             <span class="val">88</span><span class="amt">WIN</span>
+        </div>
+        <div style="position:absolute; left:${grid.style.left}; top:${grid.style.top}; width:${grid.offsetWidth}px; height:${grid.offsetHeight}px;">
+             <div class="grid-box">${document.getElementById('grid-inner').innerHTML}</div>
+        </div>
+        ${layersHTML}
     </div>
     <script>
+        const char = "${tex === 'usd' ? '$' : (tex === 'eur' ? '€' : '')}";
         document.querySelectorAll('.scratch-layer').forEach(canvas => {
             const ctx = canvas.getContext('2d');
             canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-            ctx.fillStyle = '${document.getElementById('p-cvs-color').value}';
-            ctx.fillRect(0,0,canvas.width, canvas.height);
-            // 简单暗纹渲染
-            ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.font = "14px Arial";
-            const char = "${document.getElementById('p-tex').value === 'usd' ? '$' : '€'}";
-            for(let i=0; i<canvas.width; i+=25) for(let j=0; j<canvas.height; j+=25) ctx.fillText(char, i, j);
-
-            let isDrawing = false;
+            ctx.fillStyle = '${cvsClr}'; ctx.fillRect(0,0,canvas.width, canvas.height);
+            if(char){ ctx.fillStyle="rgba(0,0,0,0.1)"; ctx.font="16px Arial"; for(let i=0;i<canvas.width+20;i+=30)for(let j=0;j<canvas.height+20;j+=30)ctx.fillText(char,i,j); }
+            
+            let drawing = false;
             const scratch = (e) => {
-                if(!isDrawing) return;
+                if(!drawing) return;
                 const rect = canvas.getBoundingClientRect();
                 const x = (e.clientX || e.touches[0].clientX) - rect.left;
                 const y = (e.clientY || e.touches[0].clientY) - rect.top;
                 ctx.globalCompositeOperation = 'destination-out';
-                ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(x, y, 25, 0, Math.PI*2); ctx.fill();
             };
-            canvas.addEventListener('mousedown', () => isDrawing = true);
-            window.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mousedown', () => drawing = true);
+            window.addEventListener('mouseup', () => drawing = false);
             canvas.addEventListener('mousemove', scratch);
-            canvas.addEventListener('touchstart', () => isDrawing = true);
+            canvas.addEventListener('touchstart', () => drawing = true);
             canvas.addEventListener('touchmove', scratch);
         });
     <\/script>
 </body>
 </html>`;
 
-        const blob = new Blob([finalHTML], {type: 'text/html'});
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = "scratch_game.html";
-        link.click();
+        document.getElementById('code-display').innerText = code;
+        document.getElementById('code-modal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('code-modal').style.display = 'none'; }
+    function copyCode() {
+        const text = document.getElementById('code-display').innerText;
+        navigator.clipboard.writeText(text).then(() => alert("代码已复制到剪贴板！"));
     }
 
     window.onload = init;
